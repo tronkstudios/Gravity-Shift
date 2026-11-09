@@ -186,7 +186,7 @@ test("HUD and all static controls referenced by the engine exist in the template
       .map((p) => fs.readFileSync(p, "utf8"))
       .join("\n"),
     template = fs.readFileSync("src/index.template.html", "utf8");
-  for (const match of source.matchAll(/getElementById\('([^']+)'\)/g))
+  for (const match of source.matchAll(/getElementById\(["']([^"']+)["']\)/g))
     assert.ok(template.includes(`id="${match[1]}"`), `missing ${match[1]}`);
 });
 test("paused simulation does not advance the run", () => {
