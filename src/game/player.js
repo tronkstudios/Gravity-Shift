@@ -133,37 +133,60 @@ export class Player {
       this.visualGroup.rotation.y += dt * 5.0;
       this.visualGroup.position.z += dt * 6.0;
     } else if (gravitySys.isTransitioning) {
-      this.visualGroup.position.set(0, 0.85, 0);
-      this.torso.rotation.x = -0.55;
-      this.leftArm.rotation.x = 0.8;
-      this.rightArm.rotation.x = -0.8;
-      this.leftLeg.rotation.x = -0.7;
-      this.rightLeg.rotation.x = 0.5;
-    } else {
-      this.visualGroup.rotation.set(
-        0,
-        isMenuShowcase ? Math.sin(nowSec) * 0.35 : 0,
-        0,
+      const progress = Math.min(
+        1,
+        gravitySys.transitionElapsed / gravitySys.transitionDuration,
       );
-      this.visualGroup.position.set(0, 0, 0);
-
-      const cadence = isMenuShowcase ? 9.5 : Math.min(22, 10 + speed * 0.22);
+      const arc = Math.sin(progress * Math.PI);
+      const blend = 1 - Math.exp(-dt * 18);
+      this.visualGroup.position.y = THREE.MathUtils.lerp(
+        this.visualGroup.position.y,
+        0.2 + arc * 0.7,
+        blend,
+      );
+      this.visualGroup.rotation.x = THREE.MathUtils.lerp(
+        this.visualGroup.rotation.x,
+        -0.22 - arc * 0.45,
+        blend,
+      );
+      this.visualGroup.rotation.z = Math.sin(progress * Math.PI * 2) * 0.18;
+      this.torso.rotation.x = -0.3;
+      this.head.rotation.x = 0.1;
+      this.leftArm.rotation.x = 0.35 + arc * 0.85;
+      this.rightArm.rotation.x = -0.35 - arc * 0.6;
+      this.leftArm.rotation.z = arc * 0.35;
+      this.rightArm.rotation.z = -arc * 0.35;
+      this.leftLeg.rotation.x = -0.2 - arc * 0.85;
+      this.rightLeg.rotation.x = 0.2 + arc * 0.65;
+    } else {
+      const blend = 1 - Math.exp(-dt * 16);
+      this.visualGroup.rotation.x *= 1 - blend;
+      this.visualGroup.rotation.z *= 1 - blend;
+      this.visualGroup.rotation.y = THREE.MathUtils.lerp(
+        this.visualGroup.rotation.y,
+        isMenuShowcase ? 0.2 : 0,
+        blend,
+      );
+      this.visualGroup.position.y *= 1 - blend;
+      const cadence = Math.min(21, 9 + speed * 0.2);
       this.runCycleTime += dt * cadence;
-
       const swing = Math.sin(this.runCycleTime);
-      const bob = Math.abs(Math.cos(this.runCycleTime)) * 0.11;
-
-      this.torso.position.y = 1.05 + bob;
-      this.torso.rotation.x = -0.22;
-      this.torso.rotation.y = swing * 0.14;
-
-      this.leftArm.rotation.x = swing * 0.95;
-      this.rightArm.rotation.x = -swing * 0.95;
-      this.leftLeg.rotation.x = -swing * 1.05;
-      this.rightLeg.rotation.x = swing * 1.05;
+      const bob = Math.cos(this.runCycleTime * 2) * 0.065;
+      this.torso.position.y = 1.08 + bob;
+      this.torso.rotation.x = -0.2 + Math.cos(this.runCycleTime * 2) * 0.045;
+      this.torso.rotation.y = swing * 0.11;
+      this.torso.rotation.z = swing * 0.045;
+      this.head.rotation.x = 0.1 - Math.cos(this.runCycleTime * 2) * 0.025;
+      this.head.rotation.y = -swing * 0.07;
+      this.leftArm.rotation.x = swing * 0.8;
+      this.rightArm.rotation.x = -swing * 0.8;
+      this.leftArm.rotation.z = 0.08;
+      this.rightArm.rotation.z = -0.08;
+      this.leftLeg.rotation.x = -swing * 0.95;
+      this.rightLeg.rotation.x = swing * 0.95;
     }
 
-    if (!this.isDead && Math.random() < 0.45) {
+    if (!this.isDead && Math.random() < 1 - Math.exp(-30 * dt)) {
       for (let i = 0; i < this.maxParticles; i++) {
         const p = this.particlesData[i];
         if (p.life <= 0) {

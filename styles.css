@@ -389,3 +389,108 @@ select:focus-visible {
   font-size: 18px;
   line-height: 1.8;
 }
+/* Attract-mode art direction: fixed observation window over the live tunnel. */
+#screen-main-menu {
+  position: relative;
+}
+#screen-main-menu > div:first-child {
+  background: linear-gradient(
+    100deg,
+    rgba(7, 16, 28, 0.96),
+    rgba(7, 16, 28, 0.78) 70%,
+    transparent
+  );
+  border-left: 0;
+  border-radius: 20px;
+  padding: 30px;
+}
+#screen-main-menu > div:last-child {
+  visibility: hidden;
+  pointer-events: none;
+}
+#screen-main-menu h1 {
+  text-shadow: 0 8px 50px #0008;
+}
+#screen-main-menu h1 span {
+  background: linear-gradient(100deg, #c5faff, #00d9ff 55%, #529aff);
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+}
+#screen-main-menu .brutal-card {
+  background: #0c1929bb;
+  border-color: #56718244;
+}
+#top-nav-bar {
+  background: #09121dbb;
+  border: 1px solid #67859730;
+  border-radius: 12px;
+  padding: 12px 16px;
+  backdrop-filter: blur(14px);
+}
+.demo-label {
+  position: fixed;
+  right: 6%;
+  bottom: 8%;
+  padding: 13px 18px;
+  border-left: 2px solid #00d9ff;
+  color: #e5faff;
+  background: #071321c9;
+  font:
+    11px "JetBrains Mono",
+    monospace;
+  letter-spacing: 2px;
+  pointer-events: none;
+}
+.demo-label small {
+  display: block;
+  margin-top: 7px;
+  font-size: 9px;
+  color: #83a7b9;
+  letter-spacing: 1px;
+}
+.demo-label i {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  background: #00e9c0;
+  border-radius: 50%;
+  margin-right: 9px;
+  box-shadow: 0 0 10px #00e9c0;
+}
+#btn-start-game {
+  transition:
+    transform 0.25s,
+    box-shadow 0.25s;
+  box-shadow:
+    0 5px 30px #00d9ff30,
+    inset 0 1px #b5f6ff;
+}
+#btn-start-game:hover {
+  box-shadow: 0 8px 45px #00d9ff55;
+}
+@media (min-width: 1024px) {
+  #screen-main-menu {
+    grid-template-columns: minmax(400px, 0.9fr) 1.1fr;
+  }
+  #screen-main-menu > div:first-child {
+    grid-column: 1;
+  }
+}
+@media (max-width: 1023px) {
+  #screen-main-menu > div:first-child {
+    background: linear-gradient(90deg, #07101ce8, #07101c9c);
+  }
+  .demo-label {
+    right: 20px;
+    bottom: 24px;
+  }
+}
+@media (max-width: 640px) {
+  #screen-main-menu > div:first-child {
+    padding: 18px;
+  }
+  .demo-label {
+    display: none;
+  }
+}

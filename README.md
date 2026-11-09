@@ -37,7 +37,7 @@ docs/                Decisiones y límites de arquitectura
 
 ## Verificación
 
-Nueve pruebas cubren guardado, recompensa única, colisiones con fotogramas de 50 ms, liberación de geometrías, tiempo de simulación, controles, pausa, composición de la aplicación y ausencia de ciclos entre módulos. La prueba de composición sustituye el renderer: no certifica el resultado visual de WebGL. Falta una revisión visual en navegador y en dispositivos.
+Once pruebas cubren guardado, recompensa única, colisiones con fotogramas de 50 ms, liberación de geometrías, tiempo de simulación, controles, pausa, composición de la aplicación y ausencia de ciclos entre módulos. La prueba de composición sustituye el renderer: no certifica el resultado visual de WebGL. Falta una revisión visual en navegador y en dispositivos.
 
 ## Datos, anuncios y móvil
 
@@ -46,3 +46,7 @@ Solo se guarda progreso en localStorage. El adaptador conserva la clave `GRAVITY
 La integración publicitaria original se mantiene sin proveedor activo: no hay anuncios reales ni ingresos. Las skins de anuncios requieren callback de recompensa de un proveedor conectado.
 
 Esta entrega es web. No contiene binarios nativos firmados ni publicaciones en App Store o Google Play. Las fuentes e iconos se descargan de sus CDN; el motor se sirve localmente.
+
+## Menú autónomo
+
+El menú incluye una demostración autónoma con cámara fija, lectura anticipada de obstáculos y cambios de superficie. `src/game/menu-director.js` controla solo la demostración, sin modificar puntuación ni energía. Las animaciones del personaje incluyen balanceo de carrera, pose aérea y transiciones suavizadas; los chasis conservan sus identidades con nuevos detalles luminosos.

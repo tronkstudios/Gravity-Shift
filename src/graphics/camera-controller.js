@@ -20,10 +20,12 @@ export class CameraController {
     const normal = surf.normal;
 
     if (isMenuShowcase) {
-      const t = performance.now() * 0.0005;
-      this.camera.position.set(Math.sin(t) * 1.6, -3.2, 6.2);
+      // Locked-off attract-mode shot: no tracking, orbit, shake or camera roll.
+      this.camera.position.set(0, 0.8, 16);
       this.camera.up.set(0, 1, 0);
-      this.camera.lookAt(0, -3.5, -18);
+      this.camera.fov = 58;
+      this.camera.lookAt(-4.8, 0, -8);
+      this.camera.updateProjectionMatrix();
       return;
     }
 

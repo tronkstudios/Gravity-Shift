@@ -270,3 +270,49 @@ test("module dependencies are acyclic and simulation modules do not depend on UI
       for (const dep of deps)
         assert.ok(!dep.includes("/ui/"), "simulation importing UI: " + file);
 });
+test("menu camera stays locked while the character changes surfaces", async () => {
+  const { CameraController } =
+    await import("../src/graphics/camera-controller.js");
+  const { THREE, GravitySystem } = runtime();
+  const camera = new THREE.PerspectiveCamera();
+  const controller = new CameraController(camera);
+  const gravity = new GravitySystem();
+  controller.update(0.016, {}, gravity, 21, true);
+  const position = camera.position.clone(),
+    quaternion = camera.quaternion.clone();
+  gravity.setSurfaceImmediate("CEILING");
+  controller.update(0.05, {}, gravity, 60, true);
+  assert.ok(camera.position.equals(position));
+  assert.ok(camera.quaternion.equals(quaternion));
+});
+test("menu autopilot avoids an approaching surface barrier without awarding progression", async () => {
+  const { MenuDirector } = await import("../src/game/menu-director.js");
+  const { GravitySystem, ScoreManager } = runtime();
+  const gravity = new GravitySystem(),
+    score = new ScoreManager();
+  const energy = score.saveData.totalEnergy;
+  let shifts = 0,
+    bursts = 0;
+  const world = {
+    obstacles: [
+      { type: "BARRIER", surfaceKey: "FLOOR", mesh: { position: { z: -12 } } },
+    ],
+    collectibles: [],
+    notifySurfaceShift() {
+      shifts++;
+    },
+    checkCollisions(player, g, onOrb) {
+      onOrb();
+    },
+  };
+  new MenuDirector().update(0.016, world, gravity, {
+    emitBurst() {
+      bursts++;
+    },
+  });
+  assert.notEqual(gravity.targetSurface.id, "FLOOR");
+  assert.equal(shifts, 1);
+  assert.ok(bursts > 0);
+  assert.equal(score.saveData.totalEnergy, energy);
+  assert.equal(score.distance, 0);
+});

@@ -91,6 +91,26 @@ export class SkinMeshBuilder {
       matAccentGold,
     );
 
+    // Small luminous seams give every chasis a readable silhouette in motion.
+    const seam = new THREE.MeshBasicMaterial({ color: skinConfig.glowColor });
+    for (const [limb, sign] of [
+      [rig.leftArm, -1],
+      [rig.rightArm, 1],
+    ]) {
+      const cuff = new THREE.Mesh(
+        new THREE.TorusGeometry(0.16, 0.025, 6, 12),
+        seam,
+      );
+      cuff.rotation.x = Math.PI / 2;
+      cuff.position.set(0, -0.32, 0);
+      limb.add(cuff);
+    }
+    const spine = new THREE.Mesh(
+      new THREE.BoxGeometry(0.055, 0.48, 0.06),
+      seam,
+    );
+    spine.position.set(0, 0.12, 0.31);
+    rig.torso.add(spine);
     return rig;
   }
 

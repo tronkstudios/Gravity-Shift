@@ -1,3 +1,4 @@
+import { MenuDirector } from "../game/menu-director.js";
 import * as THREE from "three";
 import { PALETTE } from "../config/palette.js";
 import { RewardedAdService } from "../services/rewarded-ads.js";
@@ -38,6 +39,8 @@ export class GravityShiftGame {
     this.player = new Player(this.scene);
     this.cameraCtrl = new CameraController(this.camera);
     this.world = new ProceduralWorld(this.scene, this.rng);
+    this.menuDirector = new MenuDirector();
+    this.world.resetWorld();
 
     this.applySavedSettings();
     this.input = new InputController(this);
@@ -226,9 +229,10 @@ export class GravityShiftGame {
     }
 
     if (this.state === "MENU") {
-      this.world.update(dt, 18.0, 0);
+      this.menuDirector.update(dt, this.world, this.gravitySys, this.player);
+      this.world.update(dt, this.menuDirector.speed, 0);
       this.gravitySys.update(dt);
-      this.player.update(dt, 18.0, this.gravitySys, true);
+      this.player.update(dt, this.menuDirector.speed, this.gravitySys, true);
       this.cameraCtrl.update(dt, this.player, this.gravitySys, 18.0, true);
     } else if (this.state === "COUNTDOWN") {
       this.countdownRemaining -= dt;
