@@ -16,20 +16,11 @@
     <!-- Tailwind CSS -->
     <!-- Tailwind utilities are compiled into the stylesheet. -->
 
-    <!-- FontAwesome Icons -->
-    <link
-      rel="stylesheet"
-      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
-    />
-
-    <!-- Google Fonts: Space Grotesk & JetBrains Mono -->
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700;800&family=Space+Grotesk:wght@500;700;800&display=swap"
-      rel="stylesheet"
-    />
-
+    <link rel="stylesheet" href="./assets/icons/css/all.min.css" />
+    <link rel="icon" href="./assets/icons/icon-192.png" />
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="./assets/icons/icon-192.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
     <!-- Three.js r128 -->
     <!-- Three.js is bundled with the engine. -->
 
@@ -39,6 +30,11 @@
   </head>
 
   <body>
+    <div id="loading-screen" class="loading-screen" role="status">
+      <img src="./assets/icons/mark.svg" alt="" /><strong>GRAVITY SHIFT</strong
+      ><span>Preparando el personaje y el túnel…</span>
+      <div></div>
+    </div>
     <!-- 3D WebGL Viewport -->
     <div id="canvas-container"></div>
 
@@ -1096,6 +1092,39 @@
               accept="application/json,.json"
               hidden
             />
+          </section>
+          <section class="playtest-tools">
+            <label
+              ><input id="chk-haptics" type="checkbox" /> Vibración breve (si el
+              dispositivo la admite)</label
+            ><label
+              ><input id="chk-local-metrics" type="checkbox" /> Conservar
+              historial de pruebas en este dispositivo</label
+            ><button id="btn-export-report" class="brutal-btn">
+              EXPORTAR INFORME DE PRUEBA
+            </button>
+            <p>
+              Sin envío automático. El informe incluye tiempos de fotograma y
+              resultados de partidas.
+            </p>
+          </section>
+          <section class="native-ad-tools">
+            <p id="native-ad-status">La web no muestra anuncios comerciales.</p>
+            <button id="btn-test-ads" hidden class="brutal-btn">
+              ACTIVAR ANUNCIOS DE PRUEBA</button
+            ><button id="btn-ad-privacy" hidden class="brutal-btn">
+              PRIVACIDAD DE ANUNCIOS
+            </button>
+          </section>
+          <section class="install-tools">
+            <button id="btn-install" class="brutal-btn">INSTALAR JUEGO</button
+            ><button id="btn-update" hidden class="brutal-btn">
+              ACTUALIZACIÓN LISTA · RECARGAR
+            </button>
+            <p id="offline-status">Preparando modo sin conexión…</p>
+            <a href="./privacy.html" target="_blank" rel="noopener"
+              >Privacidad y créditos</a
+            >
           </section>
           <details class="developer-tools">
             <summary>Herramientas del proyecto</summary>

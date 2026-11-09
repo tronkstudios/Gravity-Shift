@@ -23,8 +23,8 @@ export class CameraController {
       gravity.currentRollAngle * (this.mode === "HYBRID" ? 0.65 : 1);
     this.normal.set(0, 1, 0).applyQuaternion(gravity.currentQuat);
     this.smoothedPos.set(
-      gravity.currentPos2D.x * 0.56 + this.normal.x * 2.25,
-      gravity.currentPos2D.y * 0.56 + this.normal.y * 2.25,
+      gravity.currentPos2D.x * 0.56 + this.normal.x * .75,
+      gravity.currentPos2D.y * 0.56 + this.normal.y * .75,
       7.4,
     );
     this.camera.position.copy(this.smoothedPos);
@@ -35,8 +35,8 @@ export class CameraController {
     );
     this.camera.up.copy(this.currentUp);
     this.camera.lookAt(
-      gravity.currentPos2D.x * 0.25,
-      gravity.currentPos2D.y * 0.25,
+      gravity.currentPos2D.x * .5,
+      gravity.currentPos2D.y * .5,
       -28,
     );
     this.camera.fov = 64;
@@ -54,8 +54,8 @@ export class CameraController {
     // Follow the current orientation, not the destination wall before takeoff.
     this.normal.set(0, 1, 0).applyQuaternion(gravity.currentQuat);
     this.desired.set(
-      gravity.currentPos2D.x * 0.56 + this.normal.x * 2.25,
-      gravity.currentPos2D.y * 0.56 + this.normal.y * 2.25,
+      gravity.currentPos2D.x * 0.56 + this.normal.x * .75,
+      gravity.currentPos2D.y * 0.56 + this.normal.y * .75,
       7.4,
     );
     this.smoothedPos.lerp(this.desired, 1 - Math.exp(-dt * 8.5));
@@ -82,8 +82,8 @@ export class CameraController {
     );
     this.camera.up.copy(this.currentUp);
     this.camera.lookAt(
-      gravity.currentPos2D.x * 0.25,
-      gravity.currentPos2D.y * 0.25,
+      gravity.currentPos2D.x * .5,
+      gravity.currentPos2D.y * .5,
       -28,
     );
     const fov = Math.min(82, 64 + Math.max(0, speed - 30) * 0.35);

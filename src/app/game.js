@@ -1,3 +1,5 @@
+import { HapticFeedback } from "../services/haptic-feedback.js";
+import { PlaytestMetrics } from "../services/playtest-metrics.js";
 import { AdaptiveQuality } from "../graphics/adaptive-quality.js";
 import { PracticeController } from "../game/practice-controller.js";
 import {
@@ -38,6 +40,8 @@ export class GravityShiftGame {
     this.fixedAccumulator = 0;
     this.scoreMgr = new ScoreManager();
     this.audio = new AudioManager();
+    this.haptics = new HapticFeedback();
+    this.metrics = new PlaytestMetrics();
     this.adService = new RewardedAdService();
     this.hangarStudio = hangarFactory();
     this.rng = new SeededRNG(this.scoreMgr.saveData.settings.customSeed);
@@ -116,6 +120,8 @@ export class GravityShiftGame {
     this.cameraCtrl.mode = s.cameraMode || "FULL";
     this.audio.musicEnabled = !!s.music;
     this.audio.sfxEnabled = !!s.sfx;
+    this.haptics.enabled = !!s.haptics;
+    this.metrics.setEnabled(!!s.localMetrics);
 
     this.quality.setMode(s.graphics || "AUTO");
 
@@ -133,6 +139,8 @@ export class GravityShiftGame {
   triggerSurfaceShift(surfaceKey) {
     const shifted = this.gravitySys.shiftTo(surfaceKey);
     if (shifted) {
+      this.metrics?.input();
+      this.haptics?.play("shift");
       this.audio.playShiftSound(surfaceKey);
       this.player.emitBurst(18, PALETTE.CYAN);
       this.world.notifySurfaceShift(surfaceKey);
@@ -168,6 +176,7 @@ export class GravityShiftGame {
     this.ui.clearTransientFeedback();
     this.runId = (this.runId || 0) + 1;
     this.lastDeath = null;
+    this.metrics?.reset();
     this.lastShiftSequence = 0;
     this.rng.setSeed(
       mode === "daily"
@@ -348,6 +357,8 @@ export class GravityShiftGame {
     this.player.isDead = true;
     this.audio.stopMusic();
     this.audio.playImpactCrash();
+    this.haptics?.play("crash");
+    this.metrics?.finish(this);
     this.player.emitBurst(45, PALETTE.HAZARD);
     if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches)
       this.cameraCtrl.triggerShake(0.45, 0.65);
@@ -451,7 +462,10 @@ export class GravityShiftGame {
                 this.baseSpeed + this.scoreMgr.distance * 0.025,
               );
         this.scoreMgr.updateFrame(step, this.currentSpeed);
+        const wasAirborne = this.gravitySys.isTransitioning;
         this.gravitySys.update(step);
+        if (wasAirborne && !this.gravitySys.isTransitioning)
+          this.audio?.playLanding?.();
         if (
           this.gravitySys.shiftSequence !== undefined &&
           this.gravitySys.shiftSequence !== this.lastShiftSequence
@@ -527,6 +541,7 @@ export class GravityShiftGame {
         this.currentSpeed,
         false,
       );
+      this.audio?.updateFootsteps?.(this.player, this.gravitySys);
       const zone = this.zoneController?.update(
         dt,
         this.runMode === "practice" ? 0 : this.scoreMgr.distance,
@@ -558,5 +573,7 @@ export class GravityShiftGame {
     } else {
       this.renderer.render(this.scene, this.camera);
     }
+    if (this.state === "PLAYING")
+      this.metrics?.frame(frameSeconds, this.renderer, now);
   }
 }

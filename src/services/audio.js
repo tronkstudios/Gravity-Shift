@@ -64,6 +64,55 @@ export class AudioManager {
     );
   }
 
+  playFootstep(side = 1) {
+    if (this.isMuted || !this.sfxEnabled) return;
+    this.ensureContext();
+    if (!this.ctx) return;
+    this.stepNoise ??= (() => {
+      const buffer = this.ctx.createBuffer(
+          1,
+          Math.floor(this.ctx.sampleRate * 0.055),
+          this.ctx.sampleRate,
+        ),
+        data = buffer.getChannelData(0);
+      for (let i = 0; i < data.length; i++)
+        data[i] = (Math.random() * 2 - 1) * (1 - i / data.length);
+      return buffer;
+    })();
+    const noise = this.ctx.createBufferSource();
+    noise.buffer = this.stepNoise;
+    const filter = this.ctx.createBiquadFilter();
+    filter.type = "lowpass";
+    filter.frequency.value = side > 0 ? 750 : 620;
+    const gain = this.ctx.createGain();
+    gain.gain.setValueAtTime(0.025, this.ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.055);
+    noise.connect(filter);
+    filter.connect(gain);
+    gain.connect(this.ctx.destination);
+    noise.start();
+  }
+  playLanding() {
+    this.playTone(95, "sine", 0.12, 0.045, 48);
+  }
+  updateFootsteps(player, gravity) {
+    if (gravity.isTransitioning || player.isDead) {
+      this.lastFootMarker = null;
+      return;
+    }
+    const phase = player.currentRig?.captured
+      ? player.rigAnimator.phase || 0
+      : (player.runCycleTime / (Math.PI * 2)) % 1;
+    const marker = Math.floor(phase * (player.currentRig?.captured ? 4 : 2));
+    if (
+      this.lastFootMarker !== null &&
+      this.lastFootMarker !== undefined &&
+      marker !== this.lastFootMarker
+    )
+      this.playFootstep(marker % 2 ? 1 : -1);
+    this.lastFootMarker = marker;
+  }
+
   playUIClick() {
     this.playTone(720, "triangle", 0.06, 0.08, 980);
   }

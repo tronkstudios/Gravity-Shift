@@ -1,3 +1,8 @@
+import { Capacitor } from "@capacitor/core";
+import {
+  enableNativeTestAds,
+  reviewAdPrivacy,
+} from "../native/admob-provider.js";
 import { SwipeGesture } from "../input/swipe-gesture.js";
 import { dailyDate } from "../game/daily-challenge.js";
 import { MAX_BACKUP_BYTES } from "../persistence/save-backup.js";
@@ -318,6 +323,45 @@ export class InputController {
         }
       });
 
+    document
+      .getElementById("btn-export-report")
+      .addEventListener("click", () =>
+        this.game.ui.triggerFileDownload(
+          "gravity-shift-playtest.json",
+          this.game.metrics.export(),
+          "application/json",
+        ),
+      );
+    const adTestButton = document.getElementById("btn-test-ads");
+    adTestButton.hidden = !Capacitor.isNativePlatform();
+    document.getElementById("btn-ad-privacy").hidden =
+      !Capacitor.isNativePlatform();
+    adTestButton.addEventListener("click", async () => {
+      adTestButton.disabled = true;
+      try {
+        const ready = await enableNativeTestAds(this.game.adService);
+        document.getElementById("native-ad-status").textContent = ready
+          ? "Anuncios de prueba listos. No generan ingresos."
+          : "No se pueden solicitar anuncios en este momento.";
+      } catch {
+        document.getElementById("native-ad-status").textContent =
+          "No se pudieron preparar los anuncios de prueba.";
+      } finally {
+        adTestButton.disabled = false;
+      }
+    });
+    document
+      .getElementById("btn-ad-privacy")
+      .addEventListener("click", async () => {
+        try {
+          await reviewAdPrivacy();
+        } catch {
+          this.game.ui.showToast(
+            "LAS OPCIONES DE PRIVACIDAD NO ESTÁN DISPONIBLES",
+          );
+        }
+      });
+
     // Settings Modal
     document
       .getElementById("btn-open-settings")
@@ -356,6 +400,8 @@ export class InputController {
         s.music = document.getElementById("chk-music").checked;
         s.sfx = document.getElementById("chk-sfx").checked;
         s.touchpad = document.getElementById("chk-touchpad").checked;
+        s.haptics = document.getElementById("chk-haptics").checked;
+        s.localMetrics = document.getElementById("chk-local-metrics").checked;
 
         this.game.scoreMgr.persist();
         this.game.applySavedSettings();

@@ -72,6 +72,8 @@ export function validateProfile(profile) {
       music: source.music !== false,
       sfx: source.sfx !== false,
       touchpad: source.touchpad !== false,
+      haptics: source.haptics === true,
+      localMetrics: source.localMetrics === true,
       customSeed:
         typeof source.customSeed === "string"
           ? source.customSeed.slice(0, 18)

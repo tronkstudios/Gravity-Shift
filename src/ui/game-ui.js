@@ -1,3 +1,4 @@
+import { Capacitor } from "@capacitor/core";
 import { dailyDate, challengeUrl } from "../game/daily-challenge.js";
 import { exportBackup, parseBackup } from "../persistence/save-backup.js";
 import { ACHIEVEMENTS } from "../data/run-content.js";
@@ -150,7 +151,12 @@ export class GameUI {
   }
   async shareDaily() {
     const date = this.selectedDailyDate(),
-      url = challengeUrl(window.location.href, date),
+      url = challengeUrl(
+        Capacitor.isNativePlatform()
+          ? "https://gravity-shift-evolved-tronk.wholemoat8.chatgpt.site/"
+          : window.location.href,
+        date,
+      ),
       best = this.game.scoreMgr.saveData.dailyRecords[date]?.score || 0;
     const text = `Gravity Shift · reto ${date}. Mi récord local: ${best} puntos. ¿Lo superas?`;
     const panel = document.getElementById("share-panel"),
@@ -227,6 +233,10 @@ export class GameUI {
   }
 
   openSettingsModal() {
+    document.getElementById("chk-haptics").checked =
+      !!this.game.scoreMgr.saveData.settings.haptics;
+    document.getElementById("chk-local-metrics").checked =
+      !!this.game.scoreMgr.saveData.settings.localMetrics;
     const s = this.game.scoreMgr.saveData.settings;
     document.getElementById("inp-transition-speed").value =
       s.transitionDuration;

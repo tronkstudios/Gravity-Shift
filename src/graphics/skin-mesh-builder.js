@@ -1,3 +1,4 @@
+import { buildCapturedCharacter } from "./captured-character.js";
 import { addArmorDetails } from "./armor-details.js";
 import * as THREE from "three";
 
@@ -7,6 +8,7 @@ export class SkinMeshBuilder {
     const geometries = new Set(),
       materials = new Set();
     rig.root.traverse((child) => {
+      if (child.isSkinnedMesh) child.skeleton?.dispose?.();
       if (child.geometry) geometries.add(child.geometry);
       if (child.material)
         (Array.isArray(child.material)
@@ -19,6 +21,8 @@ export class SkinMeshBuilder {
   }
 
   static buildCharacterRig(skinConfig) {
+    const captured = buildCapturedCharacter(skinConfig);
+    if (captured) return captured;
     const rig = {
       root: new THREE.Group(),
       torso: new THREE.Group(),

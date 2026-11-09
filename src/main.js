@@ -1,9 +1,23 @@
+import { InstallSupport } from "./platform/install.js";
+import { loadCapturedCharacter } from "./graphics/captured-character.js";
 import { GravityShiftGame } from "./app/game.js";
-window.addEventListener("load", () => {
+window.addEventListener("load", async () => {
+  let modelReady = false;
+  try {
+    await loadCapturedCharacter();
+    modelReady = true;
+  } catch (error) {
+    console.warn("Modelo animado no disponible; usando rig básico", error);
+  }
+
   try {
     window.gravityShiftGame = new GravityShiftGame();
     window.gravityShiftGame.loadSharedDaily();
+    window.gravityShiftGame.modelReady = modelReady;
+    new InstallSupport(window.gravityShiftGame).start();
+    document.getElementById("loading-screen").hidden = true;
   } catch (error) {
+    document.getElementById("loading-screen").hidden = true;
     console.error("Unable to start Gravity Shift", error);
     const message = document.createElement("div");
     message.className = "startup-error";

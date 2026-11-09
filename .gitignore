@@ -7,3 +7,11 @@ node_modules/
 /dist/
 /index.html
 /game.js
+
+/test-results/
+/playwright-report/
+/artifacts/
+*.jks
+*.keystore
+*.p12
+*.mobileprovision

@@ -1,3 +1,4 @@
+import { CapturedMotionController } from "../graphics/captured-character.js";
 import { HumanMotionController } from "../graphics/human-motion.js";
 import * as THREE from "three";
 import { PALETTE } from "../config/palette.js";
@@ -102,7 +103,11 @@ export class Player {
       SkinMeshBuilder.disposeRig(this.currentRig);
     }
 
+    this.rigAnimator.dispose?.();
     this.currentRig = SkinMeshBuilder.buildCharacterRig(skin);
+    this.rigAnimator = this.currentRig.captured
+      ? new CapturedMotionController()
+      : new HumanMotionController();
 
     this.visualGroup.add(this.currentRig.root);
     this.rigAnimator.bind(this.currentRig);

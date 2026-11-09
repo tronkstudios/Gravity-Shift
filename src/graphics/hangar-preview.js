@@ -1,3 +1,4 @@
+import { CapturedMotionController } from "./captured-character.js";
 import * as THREE from "three";
 import { PALETTE } from "../config/palette.js";
 import { SkinMeshBuilder } from "./skin-mesh-builder.js";
@@ -117,7 +118,12 @@ export class HangarPreviewStudio {
       SkinMeshBuilder.disposeRig(this.previewRig);
     }
 
+    this.capturedMotion?.dispose();
     this.previewRig = SkinMeshBuilder.buildCharacterRig(skinConfig);
+    this.capturedMotion = this.previewRig.captured
+      ? new CapturedMotionController()
+      : null;
+    this.capturedMotion?.bind(this.previewRig);
     this.pedestalGroup.add(this.previewRig.root);
     this.pedestalRingMat.color.setHex(skinConfig.glowColor);
     this.rimLight.color.setHex(skinConfig.glowColor);
@@ -147,7 +153,15 @@ export class HangarPreviewStudio {
       }
     }
 
-    if (this.poseMode === "RUN") {
+    if (this.capturedMotion) {
+      this.capturedMotion.update(
+        this.previewRig,
+        this.poseMode === "RUN" ? dt : 0,
+        0,
+        false,
+        0,
+      );
+    } else if (this.poseMode === "RUN") {
       const t = this.animTime * 7.5;
       const swing = Math.sin(t);
       const bob = Math.abs(Math.cos(t)) * 0.08;

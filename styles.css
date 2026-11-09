@@ -1003,3 +1003,88 @@ body:has(#practice-panel:not(.hidden)) #danger-cue {
   border: 1px solid #6e97b2;
   border-radius: 12px;
 }
+.loading-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  background: #0b1423;
+  color: #c9e8ec;
+}
+.loading-screen img {
+  width: 92px;
+  height: 92px;
+  border-radius: 20px;
+}
+.loading-screen strong {
+  font-size: 24px;
+  letter-spacing: 5px;
+}
+.loading-screen span {
+  font-size: 12px;
+  color: #7893aa;
+}
+.loading-screen div {
+  width: 180px;
+  height: 3px;
+  background: linear-gradient(90deg, #20344a, #64edd6, #20344a);
+  background-size: 200%;
+  animation: load-progress 1.4s linear infinite;
+}
+@keyframes load-progress {
+  to {
+    background-position: 200%;
+  }
+}
+.install-tools {
+  padding: 12px 0;
+  border-top: 1px solid #263747;
+  font-size: 11px;
+}
+.install-tools button {
+  margin: 5px 5px 5px 0;
+  padding: 10px;
+}
+.install-tools p {
+  color: #85ad9d;
+  margin: 6px 0;
+}
+.install-tools a {
+  color: #8ec7cf;
+  text-decoration: underline;
+}
+.playtest-tools {
+  border-top: 1px solid #263747;
+  margin-top: 12px;
+  padding: 14px 0;
+  font-size: 11px;
+}
+.playtest-tools label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 10px 0;
+  color: #aac5d5;
+}
+.playtest-tools p,
+.native-ad-tools p {
+  color: #7d9aaf;
+  font-size: 10px;
+  line-height: 1.7;
+  margin: 8px 0;
+}
+.playtest-tools button,
+.native-ad-tools button {
+  padding: 10px;
+  font-size: 10px;
+  margin: 5px 8px 5px 0;
+}
+#modal-settings > div {
+  max-height: 92svh;
+  overflow-y: auto;
+  touch-action: pan-y;
+}

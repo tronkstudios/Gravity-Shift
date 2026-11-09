@@ -44,6 +44,8 @@ export class ScoreManager {
         music: true,
         sfx: true,
         touchpad: true,
+        haptics: false,
+        localMetrics: false,
         customSeed: "",
       },
     };
