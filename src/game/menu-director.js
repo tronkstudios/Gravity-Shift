@@ -37,19 +37,26 @@ export class MenuDirector {
             cost += 12 / (time + 0.3);
         } else if (ob.surfaceKey === key) cost += 10 / (time + 0.3);
       }
-      for (const orb of world.collectibles)
-        if (
+      const trail = world.collectibles.filter(
+        (orb) =>
           !orb.collected &&
           orb.surfaceKey === key &&
-          orb.mesh.position.z < -5 &&
-          orb.mesh.position.z > -45
-        )
-          cost -= 0.7;
+          orb.mesh.position.z < 1 &&
+          orb.mesh.position.z > -55,
+      );
+      for (const orb of trail) {
+        const eta = Math.max(0, -orb.mesh.position.z / this.speed);
+        cost -= 0.8 / (eta + 0.65);
+      }
+      // Stay committed to a reachable coin trail rather than oscillating between routes.
+      if (key === current && trail.some((orb) => orb.mesh.position.z > -22))
+        cost -= 0.65;
       return cost;
     };
     const choice = [...SURFACE_KEYS].sort((a, b) => rank(a) - rank(b))[0];
     if (
       choice !== current &&
+      rank(current) - rank(choice) > 0.45 &&
       this.elapsed - this.lastShift > 0.65 &&
       gravity.shiftTo(choice)
     ) {

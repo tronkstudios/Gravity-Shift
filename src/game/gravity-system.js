@@ -15,6 +15,7 @@ export class GravitySystem {
     this.lateralOffset = 0;
     this.targetLateralOffset = 0;
 
+    this.pendingSurface = null;
     this.isTransitioning = false;
     this.transitionElapsed = 0;
 
@@ -38,6 +39,11 @@ export class GravitySystem {
       return false;
     }
 
+    if (this.isTransitioning) {
+      this.pendingSurface = surfaceKey;
+      return false;
+    }
+    this.startRollAngle = this.currentRollAngle;
     this.targetSurface = nextSurf;
     this.isTransitioning = true;
     this.transitionElapsed = 0;
@@ -73,7 +79,7 @@ export class GravitySystem {
         this.transitionElapsed / Math.max(0.05, this.transitionDuration),
       );
       // Smooth cubic ease-out
-      const easeT = 1 - Math.pow(1 - rawT, 3);
+      const easeT = rawT * rawT * rawT * (rawT * (rawT * 6 - 15) + 10);
 
       // Interpolate 2D cross-section position with a slight inward arc toward tunnel center (0,0)
       this.currentPos2D.lerpVectors(this.startPos2D, this.targetPos2D, easeT);
@@ -84,10 +90,10 @@ export class GravitySystem {
       this.currentQuat.slerpQuaternions(this.startQuat, this.targetQuat, easeT);
 
       // Shortest-angle interpolation for camera roll
-      let diff = this.targetSurface.rollAngle - this.currentSurface.rollAngle;
+      let diff = this.targetSurface.rollAngle - this.startRollAngle;
       while (diff > Math.PI) diff -= Math.PI * 2;
       while (diff < -Math.PI) diff += Math.PI * 2;
-      this.currentRollAngle = this.currentSurface.rollAngle + diff * easeT;
+      this.currentRollAngle = this.startRollAngle + diff * easeT;
 
       if (rawT >= 1.0) {
         this.isTransitioning = false;
@@ -95,6 +101,9 @@ export class GravitySystem {
         this.currentPos2D.copy(this.targetPos2D);
         this.currentQuat.copy(this.targetQuat);
         this.currentRollAngle = this.targetSurface.rollAngle;
+        const queued = this.pendingSurface;
+        this.pendingSurface = null;
+        if (queued) this.shiftTo(queued);
       }
     } else {
       // Smooth lateral movement along the active surface's tangent vector

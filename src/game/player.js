@@ -94,6 +94,15 @@ export class Player {
     }
 
     this.currentRig = SkinMeshBuilder.buildCharacterRig(skin);
+    this.poseNodes = [
+      this.currentRig.torso,
+      this.currentRig.head,
+      this.currentRig.leftArm,
+      this.currentRig.rightArm,
+      this.currentRig.leftLeg,
+      this.currentRig.rightLeg,
+    ];
+    this.previousPose = this.poseNodes.map((node) => node.rotation.clone());
     this.visualGroup.add(this.currentRig.root);
 
     this.torso = this.currentRig.torso;
@@ -122,6 +131,9 @@ export class Player {
     this.root.position.z = 0;
     this.root.quaternion.copy(gravitySys.currentQuat);
 
+    this.poseNodes.forEach((node, index) =>
+      this.previousPose[index].copy(node.rotation),
+    );
     this.elapsed = (this.elapsed || 0) + dt;
     const nowSec = this.elapsed;
     if (this.currentRig && this.currentRig.animExtras) {
@@ -140,6 +152,10 @@ export class Player {
         gravitySys.transitionElapsed / gravitySys.transitionDuration,
       );
       const arc = Math.sin(progress * Math.PI);
+      const anticipation =
+        Math.sin(Math.min(1, progress / 0.22) * Math.PI) *
+        Math.max(0, 1 - progress / 0.3);
+      this.torso.position.y = 1.04 - anticipation * 0.12;
       const blend = 1 - Math.exp(-dt * 18);
       this.visualGroup.position.y = THREE.MathUtils.lerp(
         this.visualGroup.position.y,
@@ -158,7 +174,7 @@ export class Player {
       this.rightArm.rotation.x = -0.35 - arc * 0.6;
       this.leftArm.rotation.z = arc * 0.35;
       this.rightArm.rotation.z = -arc * 0.35;
-      this.leftLeg.rotation.x = -0.2 - arc * 0.85;
+      this.leftLeg.rotation.x = -0.2 - arc * 0.85 + anticipation * 0.3;
       this.rightLeg.rotation.x = 0.2 + arc * 0.65;
     } else {
       const blend = 1 - Math.exp(-dt * 16);
@@ -188,6 +204,15 @@ export class Player {
       this.rightLeg.rotation.x = swing * 0.95;
     }
 
+    if (!this.isDead) {
+      const follow = 1 - Math.exp(-dt * 24);
+      this.poseNodes.forEach((node, index) => {
+        const old = this.previousPose[index];
+        node.rotation.x = THREE.MathUtils.lerp(old.x, node.rotation.x, follow);
+        node.rotation.y = THREE.MathUtils.lerp(old.y, node.rotation.y, follow);
+        node.rotation.z = THREE.MathUtils.lerp(old.z, node.rotation.z, follow);
+      });
+    }
     if (!this.isDead)
       this.rigAnimator.update(
         this.currentRig,

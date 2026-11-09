@@ -359,6 +359,7 @@ export class GameUI {
   }
 
   updateHUD() {
+    this.updateCompassUI(this.game.gravitySys.targetSurface.id);
     const completed = this.game.scoreMgr.missionCompleted;
     const label = completed
       ? "RETO COMPLETADO · +75 ENERGÍA"

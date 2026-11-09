@@ -382,3 +382,34 @@ test("autonomous game actually collects coins and passes hazards over time", asy
   assert.ok(stage.director.coins > 0, "must visibly pick up coins");
   assert.ok(stage.director.dodges > 0, "must pass obstacles");
 });
+test("rapid directional inputs are buffered without snapping the gravity pose", () => {
+  const { GravitySystem } = runtime();
+  const gravity = new GravitySystem();
+  gravity.shiftTo("CEILING");
+  gravity.update(0.05);
+  const position = gravity.currentPos2D.clone(),
+    rotation = gravity.currentQuat.clone();
+  assert.equal(gravity.shiftTo("RIGHT"), false);
+  assert.ok(gravity.currentPos2D.equals(position));
+  assert.ok(gravity.currentQuat.equals(rotation));
+  gravity.update(0.2);
+  assert.equal(gravity.currentSurface.id, "CEILING");
+  assert.equal(gravity.targetSurface.id, "RIGHT");
+  gravity.update(0.2);
+  assert.equal(gravity.currentSurface.id, "RIGHT");
+  assert.equal(gravity.isTransitioning, false);
+  assert.ok(gravity.currentPos2D.equals(gravity.targetSurface.basePos));
+});
+test("all character designs have articulated geometry and distinct silhouette families", async () => {
+  const { SkinMeshBuilder } =
+    await import("../src/graphics/skin-mesh-builder.js");
+  const { SKINS_CATALOG } = await import("../src/data/skins.js");
+  const families = new Set();
+  for (const skin of SKINS_CATALOG) {
+    const rig = SkinMeshBuilder.buildCharacterRig(skin);
+    families.add(rig.designFamily);
+    assert.ok(rig.joints.leftKnee.children.length >= 3);
+    SkinMeshBuilder.disposeRig(rig);
+  }
+  assert.equal(families.size, 5);
+});

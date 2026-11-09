@@ -37,7 +37,7 @@ docs/                Decisiones y límites de arquitectura
 
 ## Verificación
 
-Catorce pruebas cubren guardado, recompensa única, colisiones con fotogramas de 50 ms, liberación de geometrías, tiempo de simulación, controles, pausa, composición de la aplicación y ausencia de ciclos entre módulos. La prueba de composición sustituye el renderer: no certifica el resultado visual de WebGL. Falta una revisión visual en navegador y en dispositivos.
+Dieciséis pruebas cubren guardado, recompensa única, colisiones con fotogramas de 50 ms, liberación de geometrías, tiempo de simulación, controles, pausa, composición de la aplicación y ausencia de ciclos entre módulos. La prueba de composición sustituye el renderer: no certifica el resultado visual de WebGL. Falta una revisión visual en navegador y en dispositivos.
 
 ## Datos, anuncios y móvil
 
@@ -54,3 +54,5 @@ El menú incluye una demostración autónoma con cámara fija, lectura anticipad
 El menú usa ahora `src/graphics/menu-stage.js`: un diorama 3D separado, con túnel abierto, cámara lateral fija e iluminación propia. No reutiliza el encuadre de la partida.
 
 Los chasis incluyen ahora pivotes reales de codos, rodillas y tobillos, manos y pies. `RigAnimator` anima las articulaciones con flexión de recuperación, contrabalanceo de brazos y compresión de aterrizaje. Las monedas doradas conservan la economía original de energía. El piloto del menú recoge monedas, evita obstáculos y reinicia su partida al chocar; sus contadores son independientes del guardado del jugador.
+
+Las direcciones rápidas se almacenan durante el cambio de superficie, con interpolación quintica y llegada sin salto. Los chasis incorporan cinco familias de siluetas (pesada, sigilo, carreras, celestial y técnica), armadura de hombros y rodillas, paneles pectorales y detalles animados. El piloto prioriza las cadenas de monedas con histéresis para evitar cambios de ruta innecesarios.

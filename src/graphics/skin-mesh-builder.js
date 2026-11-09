@@ -1,3 +1,4 @@
+import { addArmorDetails } from "./armor-details.js";
 import * as THREE from "three";
 
 export class SkinMeshBuilder {
@@ -119,6 +120,7 @@ export class SkinMeshBuilder {
       leftAnkle: rig.leftLeg.userData.endJoint,
       rightAnkle: rig.rightLeg.userData.endJoint,
     };
+    addArmorDetails(rig, skinConfig);
     return rig;
   }
 
