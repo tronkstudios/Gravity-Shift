@@ -138,7 +138,7 @@ export class InputController {
 
     document.getElementById("btn-retry-game").addEventListener("click", () => {
       this.game.audio.playUIClick();
-      this.game.startNewRun();
+      this.game.startNewRun({ instant: true });
     });
 
     document
@@ -152,28 +152,32 @@ export class InputController {
     document
       .getElementById("btn-revive-shield")
       .addEventListener("click", () => {
-        if (
-          this.game.scoreMgr.saveData.totalEnergy < 50 ||
-          this.game.scoreMgr.reviveUsed
-        ) {
-          this.game.ui.showToast("ENERGÍA INSUFICIENTE O ESCUDO YA UTILIZADO");
-          return;
-        }
-        this.game.audio.playEnergyPickup(5);
-        this.game.scoreMgr.saveData.totalEnergy -= 50;
-        this.game.scoreMgr.reviveUsed = true;
-        this.game.scoreMgr.persist();
+        if (!this.game.continueRun({ useEnergy: true }))
+          this.game.ui.showToast("NECESITAS 50 DE ENERGÍA O YA HAS CONTINUADO");
+      });
 
-        this.game.player.isDead = false;
-        this.game.player.shieldTimer = 3.5;
-        this.game.state = "PLAYING";
-        document.getElementById("modal-gameover").classList.add("hidden");
-        document.getElementById("screen-hud").classList.remove("hidden");
-        this.game.audio.startMusic();
-        this.game.ui.refreshAllUI();
-        this.game.ui.showToast(
-          "ESCUDO DE EMERGENCIA ACTIVADO (3.5s INVULNERABLE)",
-        );
+    document
+      .getElementById("btn-reward-continue")
+      .addEventListener("click", () => {
+        if (this.game.state !== "GAMEOVER" || this.game.scoreMgr.reviveUsed)
+          return;
+        const runId = this.game.runId,
+          button = document.getElementById("btn-reward-continue");
+        button.disabled = true;
+        this.game.adService.requestRewardedAd({
+          placementName: "continue_run",
+          onRewardGranted: () => {
+            if (this.game.runId === runId) this.game.continueRun();
+            button.disabled = false;
+          },
+          onAdDismissed: () => {
+            button.disabled = false;
+          },
+          onProviderUnavailable: () => {
+            button.disabled = false;
+            this.game.ui.showToast("ANUNCIO NO DISPONIBLE");
+          },
+        });
       });
 
     // 3D Hangar Shop Modal & Controls

@@ -1,3 +1,6 @@
+import { ZoneController } from "../graphics/zone-controller.js";
+import { judgePerfectShift } from "../game/shift-judge.js";
+import { SURFACES } from "../config/surfaces.js";
 import { MenuStage } from "../graphics/menu-stage.js";
 import * as THREE from "three";
 import { PALETTE } from "../config/palette.js";
@@ -41,6 +44,7 @@ export class GravityShiftGame {
     this.world = new ProceduralWorld(this.scene, this.rng);
     this.menuStage = new MenuStage();
     this.world.resetWorld();
+    this.zoneController = new ZoneController(this.scene, this.world);
 
     this.applySavedSettings();
     this.input = new InputController(this);
@@ -118,17 +122,22 @@ export class GravityShiftGame {
     }
   }
 
-  startNewRun() {
+  startNewRun({ instant = false } = {}) {
+    this.runId = (this.runId || 0) + 1;
+    this.lastDeath = null;
+    this.lastShiftSequence = 0;
     this.rng.setSeed(this.scoreMgr.saveData.settings.customSeed);
     this.scoreMgr.resetRun();
     this.currentSpeed = this.baseSpeed;
     this.gravitySys.setSurfaceImmediate("FLOOR");
     this.player.reset();
     this.world.resetWorld();
+    this.zoneController.update(100, 0);
+    this.audio.setZone(this.zoneController.zone);
     this.world.notifySurfaceShift("FLOOR");
 
     this.state = "COUNTDOWN";
-    this.countdownRemaining = 3;
+    this.countdownRemaining = instant ? 0 : 3;
     this.fixedAccumulator = 0;
     document.getElementById("countdown-number").textContent = "3";
     document.getElementById("countdown").classList.remove("hidden");
@@ -143,6 +152,36 @@ export class GravityShiftGame {
       "SEED: " + this.rng.seedLabel;
     this.ui.updateCompassUI("FLOOR");
     this.ui.updateHUD();
+    if (instant) {
+      this.state = "PLAYING";
+      document.getElementById("countdown").classList.add("hidden");
+      this.audio.startMusic();
+    }
+  }
+
+  continueRun({ useEnergy = false } = {}) {
+    if (this.state !== "GAMEOVER" || this.scoreMgr.reviveUsed) return false;
+    if (useEnergy && this.scoreMgr.saveData.totalEnergy < 50) return false;
+    if (useEnergy) this.scoreMgr.saveData.totalEnergy -= 50;
+    this.scoreMgr.reviveUsed = true;
+    this.scoreMgr.persist();
+    this.player.reset();
+    this.player.shieldTimer = 3.5;
+    // Move past the collision instead of returning directly into it.
+    this.world.obstacles
+      .filter((ob) => Math.abs(ob.mesh.position.z) < 12)
+      .forEach((ob) => {
+        ob.mesh.position.z = 30;
+      });
+    this.state = "PLAYING";
+    this.lastTime = performance.now();
+    this.fixedAccumulator = 0;
+    document.getElementById("modal-gameover").classList.add("hidden");
+    document.getElementById("screen-hud").classList.remove("hidden");
+    this.audio.startMusic();
+    this.ui.refreshAllUI();
+    this.ui.showToast("CONTINÚA · ESCUDO DE 3.5 s");
+    return true;
   }
 
   pauseGame() {
@@ -184,6 +223,24 @@ export class GravityShiftGame {
     if (this.state !== "PLAYING") return;
     document.getElementById("danger-cue").classList.add("hidden");
     this.state = "GAMEOVER";
+    const obstacleName = {
+      LASER: "un láser",
+      BARRIER: "una barrera",
+      HAZARD_ZONE: "una zona de peligro",
+      MOVING: "un bloque móvil",
+      ROTATING: "una barra giratoria",
+    };
+    const reason = this.lastDeath
+      ? `Colisión con ${obstacleName[this.lastDeath.type] || "un obstáculo"} en ${SURFACES[this.lastDeath.surfaceKey]?.label || "el túnel"}.`
+      : "Colisión con un obstáculo.";
+    document.getElementById("go-reason").textContent =
+      reason + " Sigue las monedas hacia otra superficie.";
+    document.getElementById("go-perfects").textContent =
+      `${this.scoreMgr.perfects} cambios perfectos · ${Math.floor(this.scoreMgr.elapsed)} s`;
+    const adButton = document.getElementById("btn-reward-continue");
+    adButton.hidden =
+      !this.adService.isProviderAvailable() || this.scoreMgr.reviveUsed;
+    adButton.disabled = false;
     this.player.isDead = true;
     this.audio.stopMusic();
     this.audio.playImpactCrash();
@@ -257,6 +314,31 @@ export class GravityShiftGame {
         );
         this.scoreMgr.updateFrame(step, this.currentSpeed);
         this.gravitySys.update(step);
+        if (
+          this.gravitySys.shiftSequence !== undefined &&
+          this.gravitySys.shiftSequence !== this.lastShiftSequence
+        ) {
+          this.lastShiftSequence = this.gravitySys.shiftSequence;
+          if (
+            judgePerfectShift(
+              this.world.obstacles,
+              this.gravitySys.lastDepartureSurface,
+              this.gravitySys.targetSurface.id,
+              this.currentSpeed,
+            )
+          ) {
+            this.scoreMgr.awardPerfect();
+            this.audio.playPerfect();
+            this.player.emitBurst(20, 0xffd16c);
+            this.ui.showToast(
+              "CAMBIO PERFECTO · ×" + this.scoreMgr.multiplier.toFixed(1),
+            );
+            document
+              .getElementById("perfect-feedback")
+              .classList.remove("hidden");
+            this.perfectUntil = now + 650;
+          }
+        }
         this.player.update(step, this.currentSpeed, this.gravitySys, false);
         this.world.update(step, this.currentSpeed, this.scoreMgr.distance);
         this.world.checkCollisions(
@@ -272,7 +354,10 @@ export class GravityShiftGame {
                 "COMBO ×" + this.scoreMgr.multiplier.toFixed(1),
               );
           },
-          () => this.handleGameOver(),
+          (obstacle) => {
+            this.lastDeath = obstacle;
+            this.handleGameOver();
+          },
         );
         if (!hadMission && this.scoreMgr.missionCompleted)
           this.ui.showToast("RETO COMPLETADO · +75 DE ENERGÍA");
@@ -285,6 +370,18 @@ export class GravityShiftGame {
         this.currentSpeed,
         false,
       );
+      const zone = this.zoneController?.update(dt, this.scoreMgr.distance);
+      if (zone) {
+        this.audio?.setZone(zone);
+        document.getElementById("hud-zone").textContent = zone.name;
+      }
+      if (this.zoneController?.changed) this.ui.showToast(zone.name);
+      if (now > (this.perfectUntil || 0))
+        document.getElementById("perfect-feedback").classList.add("hidden");
+      while (this.scoreMgr.newUnlocks.length) {
+        const skin = this.scoreMgr.newUnlocks.shift();
+        this.ui.showToast("PERSONAJE DESBLOQUEADO · " + skin.toUpperCase());
+      }
       this.ui.updateHUD();
     } else if (this.state === "GAMEOVER") {
       this.player.update(dt, 0, this.gravitySys, false);

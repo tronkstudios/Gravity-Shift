@@ -1,3 +1,4 @@
+import { ACHIEVEMENTS } from "../data/run-content.js";
 import { BrowserSaveStore } from "../persistence/browser-save-store.js";
 import { SKINS_CATALOG } from "../data/skins.js";
 
@@ -10,6 +11,11 @@ export class ScoreManager {
   }
 
   resetRun() {
+    this.elapsed = 0;
+    this.perfects = 0;
+    this.collectedCoins = 0;
+    this.newUnlocks = [];
+    this.runFinalized = false;
     this.distance = 0;
     this.score = 0;
     this.runEnergy = 0;
@@ -21,6 +27,8 @@ export class ScoreManager {
 
   loadSaveData() {
     const defaults = {
+      achievements: [],
+      totalRuns: 0,
       bestScore: 0,
       bestDistance: 0,
       totalEnergy: 350,
@@ -46,6 +54,14 @@ export class ScoreManager {
           ...parsed,
           settings: { ...defaults.settings, ...(parsed.settings || {}) },
         };
+        this.saveData.achievements = Array.isArray(parsed.achievements)
+          ? parsed.achievements.filter((id) =>
+              ACHIEVEMENTS.some((a) => a.id === id),
+            )
+          : [];
+        this.saveData.totalRuns = Number.isFinite(parsed.totalRuns)
+          ? Math.max(0, Math.floor(parsed.totalRuns))
+          : 0;
         for (const key of ["bestScore", "bestDistance", "totalEnergy"]) {
           const value = Number(this.saveData[key]);
           this.saveData[key] = Number.isFinite(value)
@@ -86,6 +102,8 @@ export class ScoreManager {
   }
 
   updateFrame(dt, speed) {
+    this.elapsed += dt;
+    this.checkAchievements();
     const dMeters = speed * dt * 0.45;
     this.distance += dMeters;
     if (!this.missionCompleted && this.distance >= 250) {
@@ -106,6 +124,8 @@ export class ScoreManager {
   }
 
   collectOrb() {
+    this.collectedCoins++;
+    this.checkAchievements();
     this.runEnergy += 1;
     this.saveData.totalEnergy += 1;
     this.streakProgress += 0.38;
@@ -116,7 +136,33 @@ export class ScoreManager {
     this.score += 75 * this.multiplier;
   }
 
+  checkAchievements() {
+    for (const achievement of ACHIEVEMENTS) {
+      if (
+        this[achievement.metric] >= achievement.target &&
+        !this.saveData.achievements.includes(achievement.id)
+      ) {
+        this.saveData.achievements.push(achievement.id);
+        if (!this.saveData.unlockedSkins.includes(achievement.skin))
+          this.saveData.unlockedSkins.push(achievement.skin);
+        this.newUnlocks.push(achievement.skin);
+        this.persist();
+      }
+    }
+  }
+  awardPerfect() {
+    this.perfects++;
+    this.multiplier = Math.min(5, this.multiplier + 0.5);
+    this.streakProgress = 1;
+    this.score += 150 * this.multiplier;
+    this.checkAchievements();
+  }
   finalizeRun() {
+    if (!this.runFinalized) {
+      this.saveData.totalRuns++;
+      this.runFinalized = true;
+    }
+
     const finalScore = Math.floor(this.score);
     const finalDist = Math.floor(this.distance);
     let isNewRecord = false;

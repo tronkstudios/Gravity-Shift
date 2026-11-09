@@ -1,4 +1,4 @@
-import { RigAnimator } from "../graphics/rig-animator.js";
+import { HumanMotionController } from "../graphics/human-motion.js";
 import * as THREE from "three";
 import { PALETTE } from "../config/palette.js";
 import { SKINS_CATALOG } from "../data/skins.js";
@@ -13,7 +13,7 @@ export class Player {
     this.scene.add(this.root);
 
     this.runCycleTime = 0;
-    this.rigAnimator = new RigAnimator();
+    this.rigAnimator = new HumanMotionController();
     this.isDead = false;
     this.shieldTimer = 0;
     this.currentRig = null;
@@ -94,16 +94,9 @@ export class Player {
     }
 
     this.currentRig = SkinMeshBuilder.buildCharacterRig(skin);
-    this.poseNodes = [
-      this.currentRig.torso,
-      this.currentRig.head,
-      this.currentRig.leftArm,
-      this.currentRig.rightArm,
-      this.currentRig.leftLeg,
-      this.currentRig.rightLeg,
-    ];
-    this.previousPose = this.poseNodes.map((node) => node.rotation.clone());
+
     this.visualGroup.add(this.currentRig.root);
+    this.rigAnimator.bind(this.currentRig);
 
     this.torso = this.currentRig.torso;
     this.head = this.currentRig.head;
@@ -131,9 +124,6 @@ export class Player {
     this.root.position.z = 0;
     this.root.quaternion.copy(gravitySys.currentQuat);
 
-    this.poseNodes.forEach((node, index) =>
-      this.previousPose[index].copy(node.rotation),
-    );
     this.elapsed = (this.elapsed || 0) + dt;
     const nowSec = this.elapsed;
     if (this.currentRig && this.currentRig.animExtras) {
@@ -143,9 +133,23 @@ export class Player {
     }
 
     if (this.isDead) {
-      this.visualGroup.rotation.x += dt * 7.5;
-      this.visualGroup.rotation.y += dt * 5.0;
-      this.visualGroup.position.z += dt * 6.0;
+      const settle = 1 - Math.exp(-dt * 7);
+      this.visualGroup.rotation.x = THREE.MathUtils.lerp(
+        this.visualGroup.rotation.x,
+        -0.85,
+        settle,
+      );
+      this.visualGroup.rotation.z = THREE.MathUtils.lerp(
+        this.visualGroup.rotation.z,
+        0.2,
+        settle,
+      );
+      this.visualGroup.position.y = THREE.MathUtils.lerp(
+        this.visualGroup.position.y,
+        -0.18,
+        settle,
+      );
+      this.visualGroup.position.z += dt * 0.35;
     } else {
       // World travel supplies the jump arc: do not add a second floating bounce.
       const follow = 1 - Math.exp(-dt * 20);
@@ -209,6 +213,8 @@ export class Player {
   }
 
   reset() {
+    this.rigAnimator.reset();
+    this.runCycleTime = 0;
     this.isDead = false;
     this.shieldTimer = 0;
     this.visualGroup.position.set(0, 0, 0);

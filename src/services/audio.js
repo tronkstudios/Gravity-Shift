@@ -1,3 +1,4 @@
+import { ZONES } from "../data/run-content.js";
 export class AudioManager {
   constructor() {
     this.ctx = null;
@@ -6,6 +7,7 @@ export class AudioManager {
     this.isMuted = false;
     this.musicInterval = null;
     this.stepIdx = 0;
+    this.zone = ZONES[0];
   }
 
   ensureContext() {
@@ -46,6 +48,14 @@ export class AudioManager {
     osc.stop(now + duration);
   }
 
+  setZone(zone) {
+    this.zone = zone;
+  }
+  playPerfect() {
+    this.playTone(880, "sine", 0.12, 0.1, 1320);
+    setTimeout(() => this.playTone(1320, "sine", 0.18, 0.08, 1760), 70);
+  }
+
   playUIClick() {
     this.playTone(720, "triangle", 0.06, 0.08, 980);
   }
@@ -74,7 +84,8 @@ export class AudioManager {
     const bassNotes = [55, 55, 65.41, 55, 73.42, 65.41, 55, 49];
     this.musicInterval = setInterval(() => {
       if (this.isMuted || !this.musicEnabled || !this.ctx) return;
-      const note = bassNotes[this.stepIdx % bassNotes.length];
+      const notes = this.zone?.notes || bassNotes;
+      const note = notes[this.stepIdx % notes.length];
       this.stepIdx++;
 
       const now = this.ctx.currentTime;

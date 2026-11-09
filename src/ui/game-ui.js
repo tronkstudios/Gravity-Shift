@@ -1,3 +1,4 @@
+import { ACHIEVEMENTS } from "../data/run-content.js";
 import { SURFACES } from "../config/surfaces.js";
 import { RARITY_META } from "../data/skins.js";
 import { SKINS_CATALOG } from "../data/skins.js";
@@ -158,7 +159,12 @@ export class GameUI {
     document.getElementById("preview-skin-name").textContent = skin.name;
     document.getElementById("preview-skin-subtitle").textContent =
       skin.subtitle;
-    document.getElementById("preview-skin-desc").textContent = skin.description;
+    const achievement = ACHIEVEMENTS.find((a) => a.skin === skin.id);
+    document.getElementById("preview-skin-desc").textContent =
+      skin.description +
+      (achievement
+        ? " También se desbloquea gratis: " + achievement.label + "."
+        : "");
     document.getElementById("preview-skin-poly").textContent = skin.polyTag;
 
     const statusEl = document.getElementById("preview-skin-status");
@@ -317,7 +323,7 @@ export class GameUI {
             ${priceBadge}
           </div>
           <div class="text-base font-extrabold text-coldwhite leading-tight">${skin.name}</div>
-          <div class="text-[10px] font-mono text-coldwhite/60 truncate">${skin.subtitle}</div>
+          <div class="text-[10px] font-mono text-coldwhite/60 truncate">${skin.subtitle}</div><div class="achievement-hint">${ACHIEVEMENTS.find((a) => a.skin === skin.id)?.label || ""}</div>
         </div>
         <div class="flex items-center justify-between pt-1 border-t border-steel/60">
           <div class="flex items-center gap-1.5">
@@ -341,6 +347,14 @@ export class GameUI {
 
   refreshAllUI() {
     const save = this.game.scoreMgr.saveData;
+    document.getElementById("achievement-progress").textContent =
+      `${save.achievements.length} / ${ACHIEVEMENTS.length} HAZAÑAS`;
+    const nextAchievement = ACHIEVEMENTS.find(
+      (a) => !save.achievements.includes(a.id),
+    );
+    document.getElementById("next-achievement").textContent = nextAchievement
+      ? nextAchievement.label + " → " + nextAchievement.skin.toUpperCase()
+      : "Todas las hazañas completadas";
     const activeSkinObj =
       SKINS_CATALOG.find((s) => s.id === save.equippedSkin) || SKINS_CATALOG[0];
 
@@ -376,7 +390,20 @@ export class GameUI {
     );
     const cue = document.getElementById("danger-cue");
     cue.classList.toggle("hidden", !hazard || this.game.state !== "PLAYING");
-    cue.textContent = "PELIGRO CERCA · CAMBIA DE SUPERFICIE";
+    const nextHazard = this.game.world.obstacles
+      .filter(
+        (ob) =>
+          ob.mesh.position.z < 0 &&
+          (ob.type === "ROTATING" ||
+            ob.surfaceKey === this.game.gravitySys.targetSurface.id),
+      )
+      .sort((a, b) => b.mesh.position.z - a.mesh.position.z)[0];
+    cue.textContent =
+      nextHazard?.type === "ROTATING"
+        ? "BARRA GIRATORIA · BUSCA EL HUECO"
+        : nextHazard?.safeSurface
+          ? "PELIGRO · VE A " + SURFACES[nextHazard.safeSurface].label
+          : "PELIGRO · CAMBIA DE SUPERFICIE";
     document.querySelectorAll(".surface-pad-btn").forEach((btn) => {
       const active =
         btn.dataset.surface === this.game.gravitySys.targetSurface.id;

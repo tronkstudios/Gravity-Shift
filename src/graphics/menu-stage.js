@@ -1,3 +1,4 @@
+import { ZoneController } from "./zone-controller.js";
 import { CameraController } from "./camera-controller.js";
 import * as THREE from "three";
 import { Player } from "../game/player.js";
@@ -28,6 +29,8 @@ export class MenuStage {
     this.player = new Player(this.scene);
     this.world = new ProceduralWorld(this.scene, new SeededRNG("MENU-STAGE"));
     this.world.resetWorld();
+    this.demoDistance = 0;
+    this.zoneController = new ZoneController(this.scene, this.world);
     this.director = new MenuDirector();
     this.director.speed = 22;
     this.respawn = 0;
@@ -46,6 +49,7 @@ export class MenuStage {
         this.player.reset();
         this.gravity.setSurfaceImmediate("FLOOR");
         this.world.resetWorld();
+        this.demoDistance = 0;
         this.director.crashed = false;
         this.respawn = 0;
       }
@@ -61,7 +65,9 @@ export class MenuStage {
     this.director.update(dt, this.world, this.gravity, this.player);
     this.gravity.update(dt);
     this.player.update(dt, this.director.speed, this.gravity, true);
-    this.world.update(dt, this.director.speed, 0);
+    this.demoDistance += dt * this.director.speed * 0.45;
+    this.zoneController.update(dt, this.demoDistance);
+    this.world.update(dt, this.director.speed, this.demoDistance);
   }
   render(renderer, width, height) {
     this.camera.aspect = width / height;

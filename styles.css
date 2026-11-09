@@ -639,3 +639,109 @@ body:has(#screen-main-menu:not(.hidden)) #canvas-container::after {
     background: linear-gradient(180deg, #070e1ae8, transparent 65%);
   }
 }
+[hidden] {
+  display: none !important;
+}
+.zone-badge {
+  display: block;
+  color: #c7eaf3;
+  font-size: 11px;
+  letter-spacing: 1.2px;
+  margin-bottom: 8px;
+}
+.perfect-feedback {
+  position: fixed;
+  left: 50%;
+  top: 30%;
+  transform: translateX(-50%);
+  z-index: 35;
+  text-align: center;
+  color: #ffe19b;
+  font:
+    700 clamp(20px, 4vw, 36px) "Space Grotesk",
+    sans-serif;
+  text-shadow: 0 0 30px #ffbe5266;
+  pointer-events: none;
+  animation: perfect-in 0.65s ease-out;
+}
+.perfect-feedback small {
+  display: block;
+  font:
+    10px "JetBrains Mono",
+    monospace;
+  letter-spacing: 2px;
+  margin-top: 8px;
+  color: #ffecc9;
+}
+@keyframes perfect-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 15px) scale(0.9);
+  }
+  30% {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+    transform: translate(-50%, -15px) scale(1);
+  }
+}
+.perfect-feedback.hidden {
+  display: none;
+}
+.achievement-hint {
+  font-size: 9px;
+  line-height: 1.5;
+  color: #a7d6ca;
+  margin-top: 6px;
+}
+.death-reason {
+  padding: 12px 14px;
+  border-left: 2px solid #ff987d;
+  color: #c9d4df;
+  font-size: 12px;
+  line-height: 1.7;
+  background: #ff654a0a;
+}
+.run-detail {
+  color: #9bb2c6;
+  font:
+    11px "JetBrains Mono",
+    monospace;
+}
+.developer-tools {
+  border-top: 1px solid #263747;
+  padding-top: 12px;
+  color: #839db0;
+  font-size: 11px;
+}
+.developer-tools summary {
+  cursor: pointer;
+  padding: 8px 0;
+}
+.developer-tools button,
+.developer-tools a {
+  display: inline-flex;
+  margin: 8px 8px 8px 0;
+}
+#screen-main-menu .mission-card {
+  max-width: 360px;
+  padding: 12px 16px;
+}
+#screen-main-menu .mission-card strong {
+  font-size: 14px;
+}
+#top-nav-bar .brutal-card {
+  background: #09152270;
+  box-shadow: none;
+}
+@media (max-width: 899px) {
+  #screen-main-menu .mission-card {
+    display: flex;
+    max-width: 280px;
+    margin-top: 10px;
+  }
+  #screen-main-menu .mission-card > span:last-child {
+    display: none;
+  }
+}

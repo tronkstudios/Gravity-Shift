@@ -1,88 +1,81 @@
+/** Optional ad bridge. No provider means no ads and no synthetic rewards. */
 export class RewardedAdService {
   constructor() {
     this.externalProvider = null;
+    this.busy = false;
   }
-
-  registerProvider(providerObj) {
-    if (providerObj && typeof providerObj.showRewardedAd === "function") {
-      this.externalProvider = providerObj;
-    }
+  registerProvider(provider) {
+    if (typeof provider?.showRewardedAd === "function")
+      this.externalProvider = provider;
   }
-
   isProviderAvailable() {
-    if (this.externalProvider) return true;
-    if (typeof window.adBreak === "function") return true;
-    if (window.admob && typeof window.admob.rewardVideo?.show === "function")
-      return true;
-    return false;
+    return !!this.externalProvider || typeof window.adBreak === "function";
   }
-
   getProviderStatusText() {
-    if (this.isProviderAvailable()) {
-      return {
-        ready: true,
-        label: "SDK CONECTADO",
-        detail:
-          "Proveedor de anuncios recompensados listo. Completa el vídeo para desbloquear permanentemente.",
-      };
-    }
+    const ready = this.isProviderAvailable();
     return {
-      ready: false,
-      label: "SDK NO DETECTADO EN ENTORNO LOCAL",
-      detail:
-        "Interfaz modular AdMob / H5 AdPlacement lista. Conecta un proveedor real (window.adBreak o adService.registerProvider) para emitir anuncios y desbloquear esta skin.",
+      ready,
+      label: ready ? "ANUNCIOS DISPONIBLES" : "SIN PROVEEDOR DE ANUNCIOS",
+      detail: ready
+        ? "La recompensa se concede solo al completar el anuncio."
+        : "No se solicitan anuncios ni se conceden recompensas publicitarias. Conecta un proveedor real para activarlos.",
     };
   }
-
   requestRewardedAd({
-    placementName = "unlock_aether_valkyrie",
+    placementName = "unlock_skin",
     onRewardGranted,
     onAdDismissed,
     onProviderUnavailable,
   }) {
-    if (this.externalProvider) {
-      this.externalProvider.showRewardedAd({
-        placementName,
-        onReward: () => {
-          if (onRewardGranted) onRewardGranted();
-        },
-        onCancel: () => {
-          if (onAdDismissed) onAdDismissed();
-        },
-      });
-      return;
+    if (this.busy) {
+      onProviderUnavailable?.();
+      return false;
     }
-
-    if (typeof window.adBreak === "function") {
-      let rewardEarned = false;
-      window.adBreak({
-        type: "reward",
-        name: placementName,
-        beforeReward: (showAdFn) => {
-          showAdFn();
-        },
-        adViewed: () => {
-          rewardEarned = true;
-          if (onRewardGranted) onRewardGranted();
-        },
-        adDismissed: () => {
-          if (!rewardEarned && onAdDismissed) onAdDismissed();
-        },
-        adBreakDone: (placementInfo) => {
-          if (
-            placementInfo &&
-            placementInfo.breakStatus !== "viewed" &&
-            !rewardEarned
-          ) {
-            if (onAdDismissed) onAdDismissed();
-          }
-        },
-      });
-      return;
+    if (!this.isProviderAvailable()) {
+      onProviderUnavailable?.();
+      return false;
     }
-
-    if (onProviderUnavailable) {
-      onProviderUnavailable();
+    this.busy = true;
+    let settled = false;
+    const finish = (kind) => {
+      if (settled) return;
+      settled = true;
+      this.busy = false;
+      if (kind === "reward") onRewardGranted?.();
+      else if (kind === "dismissed") onAdDismissed?.();
+      else onProviderUnavailable?.();
+    };
+    try {
+      if (this.externalProvider) {
+        const result = this.externalProvider.showRewardedAd({
+          placementName,
+          onReward: () => finish("reward"),
+          onCancel: () => finish("dismissed"),
+          onError: () => finish("unavailable"),
+        });
+        if (result?.catch) result.catch(() => finish("unavailable"));
+      } else {
+        let viewed = false;
+        window.adBreak({
+          type: "reward",
+          name: placementName,
+          beforeReward: (show) => show(),
+          adViewed: () => {
+            viewed = true;
+          },
+          adDismissed: () => {
+            if (!viewed) finish("dismissed");
+          },
+          adBreakDone: (info) => {
+            if (viewed && info?.breakStatus === "viewed") finish("reward");
+            else finish("unavailable");
+          },
+        });
+      }
+    } catch {
+      finish("unavailable");
+      return false;
     }
+    return true;
   }
 }

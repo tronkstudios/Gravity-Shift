@@ -1,10 +1,51 @@
 # Gravity Shift — Evolved
 
-Runner 3D de cuatro superficies, basado en el juego original. Mantiene el hangar, las 16 skins, las semillas y el progreso local V2. Incluye cuenta atrás, avisos de peligro, reto de 250 metros, controles táctiles y correcciones de colisiones y memoria.
+Runner 3D de cuatro superficies con partidas rápidas, cambios perfectos y tres sectores. Mantiene el hangar, las 16 skins, las semillas y el progreso local del juego original.
+
+## Jugar
+
+- W / ↑: techo; S / ↓: suelo; A / ←: pared izquierda; D / →: pared derecha. En móvil, desliza o usa el pad.
+- Sigue las monedas doradas y evita los obstáculos naranjas. Los avisos identifican la superficie de peligro y su salida segura.
+- Cambiar desde una superficie amenazada entre 0,12 y 0,65 segundos antes de un obstáculo, hacia una superficie libre, concede un cambio perfecto: puntos, multiplicador, sonido y estela. Cada obstáculo puede puntuar una sola vez.
+- El primer inicio incluye instrucciones y cuenta atrás; reintentar tras perder es inmediato. El resumen explica la colisión.
+
+## Contenido
+
+Tres secuencias de tres pasos (ascenso, contracurva y regreso) se combinan en un recorrido continuo. La apertura enseña el suelo, las paredes y el techo; cada fila conserva una ruta segura con monedas y separación para reaccionar. El inicio se mantiene reproducible y las secuencias posteriores se eligen con la semilla.
+
+| Sector             | Entrada | Identidad                                                   |
+| ------------------ | ------- | ----------------------------------------------------------- |
+| Muelle industrial  | 0 m     | Guías cian y una superficie bloqueada por paso              |
+| Núcleo del reactor | 250 m   | Luz ámbar, nueva línea musical y dos superficies bloqueadas |
+| Sector fracturado  | 650 m   | Tonos violeta, paneles inclinados y bloques móviles         |
+
+Cada sector cambia la iluminación progresivamente y tiene su línea musical. El menú muestra una partida automática independiente desde el interior del túnel. Sus monedas y esquives no afectan al progreso del jugador.
+
+## Personajes y movimiento
+
+Las 16 skins mantienen su identidad en cinco familias de siluetas. Los rigs tienen codos, rodillas y tobillos articulados. `human-motion.js` genera clips de carrera y transferencia a partir de una trayectoria de pie con cinemática inversa, los mezcla con AnimationMixer y añade un clip de amortiguación de aterrizaje. Son animaciones procedurales, no captura de movimiento ni clips de un proveedor externo.
+
+Los cambios rápidos se almacenan durante la transición, la gravedad usa interpolación suave y la muerte muestra un tropiezo breve. La preferencia de movimiento reducido desactiva los efectos de pantalla y las sacudidas.
+
+Además de comprar skins con energía, puedes desbloquearlas gratis:
+
+| Hazaña en una partida     | Personaje |
+| ------------------------- | --------- |
+| Sobrevivir 60 segundos    | PHANTOM   |
+| Hacer 5 cambios perfectos | VOLT      |
+| Recoger 50 monedas        | FROST     |
+
+Las hazañas se guardan y no descuentan energía. El objetivo de 250 m sigue concediendo +75 de energía una sola vez por partida.
+
+## Continuación y anuncios
+
+Puedes continuar una vez por partida pagando 50 de energía. Si hay un proveedor real conectado, también aparece la alternativa de ver un anuncio recompensado. No se interrumpe la partida con publicidad. La cancelación, indisponibilidad y callbacks repetidos no conceden recompensas; las respuestas antiguas no afectan a una nueva partida.
+
+Esta entrega no lleva unidades publicitarias activas ni genera ingresos. Para activar anuncios hay que registrar el proveedor, configurar las unidades y el consentimiento correspondiente. El botón publicitario permanece oculto mientras no haya proveedor. Los anuncios de skins usan la misma frontera de integración.
 
 ## Desarrollo
 
-Node.js 22 o superior:
+Requiere Node.js 22 o superior:
 
 ```sh
 npm ci
@@ -12,51 +53,12 @@ npm run check
 npm run dev
 ```
 
-La URL local es `http://localhost:4173`. Después de editar fuentes, reconstruye y recarga. `npm run build` genera `dist/`, listo para hosting estático. `npm run package` añade un ZIP de las fuentes a la distribución; este último comando requiere Python 3. CI genera y adjunta la distribución en cada push/PR.
+La URL local es `http://localhost:4173`. Reconstruye y recarga después de editar. `npm run build` genera `dist/` para hosting estático. `npm run package` añade el ZIP de fuentes y requiere Python 3. GitHub Actions valida y adjunta la distribución en cada push/PR. Las herramientas de descarga están dentro de Ajustes.
 
-## Organización
+Los módulos de `src/` y `styles.css` son la fuente de verdad. `index.html`, `game.js` y `dist/` se generan y se excluyen de Git. Three.js 0.128.0 y Tailwind se incluyen en la compilación; fuentes e iconos se descargan desde sus CDN. [Arquitectura y dependencias](docs/architecture.md).
 
-```text
-src/
-  main.js             Arranque y error de inicialización
-  app/                Coordinador y ciclo de partida
-  game/               Gravedad, jugador, mundo y colisiones
-  graphics/           Modelos, cámara y hangar
-  ui/                 Presentación, HUD y entradas
-  state/              Puntuación, economía y reto
-  persistence/        Adaptador de guardado local
-  services/           Audio y anuncios recompensados
-  config/             Constantes y superficies
-  data/               Catálogo de skins
-scripts/              Compilación, servidor local y empaquetado
-tests/               Pruebas de comportamiento e integración
-docs/                Decisiones y límites de arquitectura
-```
+## Verificación y límites
 
-[Arquitectura y dependencias](docs/architecture.md). Los módulos ES son la fuente de verdad. `index.html`, `game.js` y `dist/` son resultados generados y no se editan ni versionan. Three.js está fijado en 0.128.0 por compatibilidad y se incluye en el bundle.
+25 pruebas cubren guardado, economía, colisiones a 20 FPS, rutas seguras, cambios perfectos, sectores, hazañas, animaciones, recompensas publicitarias, reintento, continuación y límites de módulos. Los tests de aplicación usan un renderer de prueba: no sustituyen una revisión visual WebGL en navegador ni en dispositivos.
 
-## Verificación
-
-Diecisiete pruebas cubren guardado, recompensa única, colisiones con fotogramas de 50 ms, liberación de geometrías, tiempo de simulación, controles, pausa, composición de la aplicación y ausencia de ciclos entre módulos. La prueba de composición sustituye el renderer: no certifica el resultado visual de WebGL. Falta una revisión visual en navegador y en dispositivos.
-
-## Datos, anuncios y móvil
-
-Solo se guarda progreso en localStorage. El adaptador conserva la clave `GRAVITY_SHIFT_SAVE_V2` del juego original. No se transfieren partidas automáticamente entre dominios o dispositivos.
-
-La integración publicitaria original se mantiene sin proveedor activo: no hay anuncios reales ni ingresos. Las skins de anuncios requieren callback de recompensa de un proveedor conectado.
-
-Esta entrega es web. No contiene binarios nativos firmados ni publicaciones en App Store o Google Play. Las fuentes e iconos se descargan de sus CDN; el motor se sirve localmente.
-
-## Menú autónomo
-
-El menú incluye una demostración autónoma con cámara fija, lectura anticipada de obstáculos y cambios de superficie. `src/game/menu-director.js` controla solo la demostración, sin modificar puntuación ni energía. Las animaciones del personaje incluyen balanceo de carrera, pose aérea y transiciones suavizadas; los chasis conservan sus identidades con nuevos detalles luminosos.
-
-El menú usa ahora `src/graphics/menu-stage.js`: un diorama 3D separado, con túnel abierto, cámara lateral fija e iluminación propia. No reutiliza el encuadre de la partida.
-
-Los chasis incluyen ahora pivotes reales de codos, rodillas y tobillos, manos y pies. `RigAnimator` anima las articulaciones con flexión de recuperación, contrabalanceo de brazos y compresión de aterrizaje. Las monedas doradas conservan la economía original de energía. El piloto del menú recoge monedas, evita obstáculos y reinicia su partida al chocar; sus contadores son independientes del guardado del jugador.
-
-Las direcciones rápidas se almacenan durante el cambio de superficie, con interpolación quintica y llegada sin salto. Los chasis incorporan cinco familias de siluetas (pesada, sigilo, carreras, celestial y técnica), armadura de hombros y rodillas, paneles pectorales y detalles animados. El piloto prioriza las cadenas de monedas con histéresis para evitar cambios de ruta innecesarios.
-
-La carrera usa ahora una trayectoria de pie con apoyo y recuperación, resuelta mediante cinemática inversa de dos segmentos. Se corrigió el sentido de flexión de rodillas y codos y se redujeron el giro del tronco, la oscilación vertical y el rebote añadido durante los cambios de gravedad. No utiliza captura de movimiento.
-
-La vista de menú vuelve al interior del túnel y a la perspectiva trasera de la partida a pantalla completa; se retira la maqueta lateral. La arquitectura del túnel comparte ahora luces de servicio cálidas, guías frías, ventilaciones y paneles. Los personajes tienen hombreras redondeadas y detalles dorsales para esta perspectiva.
+El progreso solo se guarda en localStorage, conservando `GRAVITY_SHIFT_SAVE_V2`. No hay backend, transferencia automática entre dominios ni clasificaciones remotas. La entrega es web; no contiene binarios firmados ni publicaciones en App Store o Google Play.

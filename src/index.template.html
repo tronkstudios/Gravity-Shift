@@ -68,6 +68,9 @@
     <div id="danger-cue" class="danger-cue hidden" role="status">
       PELIGRO EN TU SUPERFICIE · CAMBIA
     </div>
+    <div id="perfect-feedback" class="perfect-feedback hidden" role="status">
+      CAMBIO PERFECTO<small>PRECISIÓN + MULTIPLICADOR</small>
+    </div>
     <!-- Toast Notification -->
     <div
       role="status"
@@ -130,12 +133,6 @@
             >
           </div>
 
-          <a
-            href="./gravity-shift-source.zip"
-            download
-            class="brutal-btn px-3 py-1.5 font-mono text-xs"
-            >PROYECTO ZIP</a
-          >
           <!-- Quick Mute Toggle -->
           <button
             id="btn-quick-mute"
@@ -146,13 +143,6 @@
           </button>
 
           <!-- Vite / TS Architecture Modal Button -->
-          <button
-            id="btn-open-arch"
-            class="brutal-btn brutal-btn-primary px-3 py-1.5 rounded font-mono text-xs flex items-center gap-1.5 text-coldwhite"
-          >
-            <i class="fa-brands fa-github text-base"></i>
-            <span>DESCARGAR CÓDIGO</span>
-          </button>
         </div>
       </header>
 
@@ -219,8 +209,10 @@
           </div>
 
           <div class="mission-card">
-            <span class="mission-kicker">RETO DE CADA PARTIDA</span
-            ><strong>Rompe la barrera de los 250 m.</strong
+            <span class="mission-kicker"
+              ><span id="achievement-progress">0 / 3 HAZAÑAS</span></span
+            ><strong id="next-achievement"
+              >Sobrevive 60 segundos → PHANTOM</strong
             ><span
               >Completa el recorrido y gana +75 de energía para tu próximo
               chasis.</span
@@ -460,7 +452,8 @@
           <div
             class="brutal-card px-2.5 py-1 rounded font-mono text-[10px] text-coldwhite/60"
           >
-            <span id="hud-seed-badge">SEED: AUTO</span>
+            <span id="hud-zone" class="zone-badge">01 · MUELLE INDUSTRIAL</span
+            ><span id="hud-seed-badge">SEED: AUTO</span>
             <div class="run-mission">
               <span id="mission-label">RETO 0 / 250 m</span>
               <div><i id="mission-bar"></i></div>
@@ -827,6 +820,15 @@
             </div>
           </div>
 
+          <p id="go-reason" class="death-reason"></p>
+          <p id="go-perfects" class="run-detail"></p>
+          <button
+            id="btn-reward-continue"
+            hidden
+            class="brutal-btn reward-continue"
+          >
+            CONTINUAR · VER ANUNCIO OPCIONAL
+          </button>
           <!-- Optional Emergency Shield Revive (Costs in-game Energy) -->
           <button
             id="btn-revive-shield"
@@ -844,7 +846,7 @@
               class="brutal-btn brutal-btn-primary flex-1 py-3.5 rounded font-bold text-base flex items-center justify-center gap-2"
             >
               <i class="fa-solid fa-rotate-right"></i>
-              <span>VOLVER A JUGAR</span>
+              <span>REINTENTAR AHORA ↗</span>
             </button>
             <button
               id="btn-gameover-menu"
@@ -985,6 +987,21 @@
             </div>
           </div>
 
+          <details class="developer-tools">
+            <summary>Herramientas del proyecto</summary>
+            <button
+              id="btn-open-arch"
+              class="brutal-btn brutal-btn-primary px-3 py-1.5 rounded font-mono text-xs flex items-center gap-1.5 text-coldwhite"
+            >
+              <i class="fa-brands fa-github text-base"></i>
+              <span>DESCARGAR CÓDIGO</span></button
+            ><a
+              href="./gravity-shift-source.zip"
+              download
+              class="brutal-btn px-3 py-1.5 font-mono text-xs"
+              >PROYECTO ZIP</a
+            >
+          </details>
           <div
             class="flex items-center justify-between pt-3 border-t border-steel"
           >

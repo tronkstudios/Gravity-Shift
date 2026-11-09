@@ -1,3 +1,4 @@
+import { RUN_PHRASES, zoneForDistance } from "../data/run-content.js";
 import { addTunnelAtmosphere } from "../graphics/tunnel-atmosphere.js";
 import * as THREE from "three";
 import { PALETTE } from "../config/palette.js";
@@ -23,7 +24,7 @@ export class ProceduralWorld {
 
     this.initSharedMaterials();
     this.initTunnelPool();
-    addTunnelAtmosphere(this.scene, this.tunnelSegments);
+    this.atmosphere = addTunnelAtmosphere(this.scene, this.tunnelSegments);
     this.initSpeedDust();
   }
 
@@ -287,9 +288,7 @@ export class ProceduralWorld {
     this.nextPatternZ = -52;
     this.patternCounter = 0;
 
-    for (let i = 0; i < 10; i++) {
-      this.spawnNextPattern(0);
-    }
+    while (this.nextPatternZ > -TUNNEL.VISIBLE_AHEAD) this.spawnNextPattern(0);
   }
 
   spawnSurfaceObstacle(surfaceKey, zPos, type = "BARRIER") {
@@ -358,6 +357,14 @@ export class ProceduralWorld {
       height = 2.6;
     }
 
+    if (type !== "MOVING") {
+      const warning = new THREE.Mesh(
+        new THREE.BoxGeometry(10.6, 0.055, 0.065),
+        this.matLaserBeam,
+      );
+      warning.position.set(0, 0.45, 1);
+      group.add(warning);
+    }
     this.scene.add(group);
     this.obstacles.push({
       type,
@@ -429,43 +436,36 @@ export class ProceduralWorld {
    * Guarantees at least 1 surface is always 100% open and places guiding energy orbs on a safe surface.
    */
   spawnNextPattern(distance) {
-    this.patternCounter++;
-    const z = this.nextPatternZ;
-
-    // Progressive spacing based on distance
-    const gap = Math.max(24, 34 - Math.min(10, distance * 0.004));
-    this.nextPatternZ -= gap;
-
-    // Rotating beam pattern every few steps
-    if (this.patternCounter % 5 === 0) {
-      this.spawnRotatingBlades(z);
-      const safeKey = this.rng.pick(SURFACE_KEYS);
-      this.spawnEnergyTrail(safeKey, z - 8, 3, 4.0);
-      return;
-    }
-
-    // Determine how many surfaces to block (1 to 3, NEVER 4)
-    const maxBlocked = distance > 350 ? 3 : distance > 120 ? 2 : 1;
-    const numBlocked = Math.min(
-      3,
-      Math.floor(this.rng.range(1, maxBlocked + 0.95)),
-    );
-
-    const shuffled = [...SURFACE_KEYS].sort(() => this.rng.next() - 0.5);
-    const blockedSurfaces = shuffled.slice(0, numBlocked);
-    const safeSurfaces = shuffled.slice(numBlocked);
-
-    const obsTypes = ["BARRIER", "LASER", "HAZARD_ZONE", "MOVING"];
-    blockedSurfaces.forEach((sKey) => {
-      const chosenType = this.rng.pick(obsTypes);
-      this.spawnSurfaceObstacle(sKey, z, chosenType);
+    const phrase =
+      this.patternCounter < 3
+        ? RUN_PHRASES[this.patternCounter]
+        : this.rng.pick(RUN_PHRASES);
+    const start = this.nextPatternZ;
+    const predictedDistance = distance + Math.max(0, -start) * 0.45;
+    const zone = zoneForDistance(predictedDistance);
+    const spacing =
+      zone.id === "industrial" ? 52 : zone.id === "reactor" ? 56 : 60;
+    const blockedCount =
+      zone.id === "industrial" ? 1 : zone.id === "reactor" ? 2 : 3;
+    phrase.route.forEach((safe, beat) => {
+      const z = start - beat * spacing;
+      const candidates = SURFACE_KEYS.filter((key) => key !== safe);
+      // Rotate blocked faces per beat while retaining one verified safe coin path.
+      for (let j = 0; j < blockedCount; j++) {
+        const face = candidates[(j + beat) % candidates.length];
+        const kind =
+          zone.id === "fracture" && beat === 1
+            ? "MOVING"
+            : phrase.hazards[beat];
+        this.spawnSurfaceObstacle(face, z, kind);
+        const ob = this.obstacles[this.obstacles.length - 1];
+        ob.phrase = phrase.name;
+        ob.safeSurface = safe;
+      }
+      this.spawnEnergyTrail(safe, z + 18, 4, 4);
     });
-
-    // Always place energy collectibles on one of the verified safe surfaces
-    if (safeSurfaces.length > 0) {
-      const rewardSurf = safeSurfaces[0];
-      this.spawnEnergyTrail(rewardSurf, z + 4, 3, 4.0);
-    }
+    this.patternCounter++;
+    this.nextPatternZ -= spacing * 3 + 24;
   }
 
   update(dt, speed, distance) {
@@ -590,7 +590,7 @@ export class ProceduralWorld {
 
         const perpDist = Math.abs(-sinA * torsoX + cosA * torsoY);
         if (perpDist < 0.95) {
-          onObstacleHit();
+          onObstacleHit(obs);
           return;
         }
       } else if (
@@ -599,7 +599,7 @@ export class ProceduralWorld {
       ) {
         const latDiff = Math.abs(gravitySys.lateralOffset - (obs.localX || 0));
         if (latDiff < obs.halfW + 0.35) {
-          onObstacleHit();
+          onObstacleHit(obs);
           return;
         }
       }

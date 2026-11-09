@@ -429,3 +429,202 @@ test("human gait plants the stance foot and bends knees only anatomically", asyn
     assert.ok(Math.abs(pose.hip + pose.knee + pose.ankle) < 0.00001);
   }
 });
+test("authored phrases retain a safe coin route at every difficulty", () => {
+  const { ProceduralWorld, THREE, SeededRNG } = runtime();
+  for (const distance of [0, 250, 1000]) {
+    const world = new ProceduralWorld(
+      new THREE.Scene(),
+      new SeededRNG("PHRASES"),
+    );
+    world.spawnNextPattern(distance);
+    const rows = new Map();
+    for (const ob of world.obstacles) {
+      const z = ob.mesh.position.z;
+      rows.set(z, [...(rows.get(z) || []), ob]);
+    }
+    assert.equal(rows.size, 3);
+    const positions = [...rows.keys()].sort((a, b) => b - a);
+    assert.ok(positions[0] - positions[1] >= 52);
+    for (const [z, row] of rows) {
+      const safe = row[0].safeSurface;
+      assert.ok(row.every((ob) => ob.surfaceKey !== safe));
+      assert.ok(new Set(row.map((ob) => ob.surfaceKey)).size <= 3);
+      assert.ok(
+        world.collectibles.some(
+          (coin) =>
+            coin.surfaceKey === safe &&
+            coin.mesh.position.z > z &&
+            coin.mesh.position.z <= z + 18,
+        ),
+      );
+    }
+  }
+});
+test("perfect shifts require a timed threat and safe destination and pay once per obstacle", async () => {
+  const { judgePerfectShift } = await import("../src/game/shift-judge.js");
+  const threat = {
+    surfaceKey: "FLOOR",
+    type: "LASER",
+    mesh: { position: { z: -12 } },
+  };
+  assert.equal(judgePerfectShift([threat], "FLOOR", "LEFT", 30), true);
+  assert.equal(judgePerfectShift([threat], "FLOOR", "LEFT", 30), false);
+  const second = { ...threat, perfectCredited: false };
+  assert.equal(
+    judgePerfectShift(
+      [second, { surfaceKey: "LEFT", mesh: { position: { z: -5 } } }],
+      "FLOOR",
+      "LEFT",
+      30,
+    ),
+    false,
+  );
+  assert.equal(
+    judgePerfectShift(
+      [{ ...second, mesh: { position: { z: -100 } } }],
+      "FLOOR",
+      "LEFT",
+      30,
+    ),
+    false,
+  );
+});
+test("all three achievements unlock and persist without charging currency or duplicating runs", () => {
+  const { ScoreManager, storage } = runtime();
+  const score = new ScoreManager();
+  score.updateFrame(60, 0);
+  for (let i = 0; i < 5; i++) score.awardPerfect();
+  for (let i = 0; i < 50; i++) score.collectOrb();
+  assert.equal(score.saveData.achievements.length, 3);
+  for (const skin of ["phantom", "volt", "frost"])
+    assert.ok(score.saveData.unlockedSkins.includes(skin));
+  assert.equal(score.saveData.totalEnergy, 400);
+  score.finalizeRun();
+  score.finalizeRun();
+  assert.equal(score.saveData.totalRuns, 1);
+  assert.equal(JSON.parse(storage.value).achievements.length, 3);
+});
+test("zones change at the configured distances and transition lighting without changing geometry", async () => {
+  const { zoneForDistance } = await import("../src/data/run-content.js");
+  const { ZoneController } = await import("../src/graphics/zone-controller.js");
+  const { ProceduralWorld, THREE, SeededRNG } = runtime();
+  assert.equal(zoneForDistance(0).id, "industrial");
+  assert.equal(zoneForDistance(250).id, "reactor");
+  assert.equal(zoneForDistance(650).id, "fracture");
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x10151d);
+  scene.fog = new THREE.Fog(0x10151d, 20, 80);
+  const world = new ProceduralWorld(scene, new SeededRNG("ZONE"));
+  const controller = new ZoneController(scene, world),
+    segments = world.tunnelSegments.length;
+  controller.update(100, 650);
+  assert.equal(controller.zone.id, "fracture");
+  assert.equal(controller.changed, true);
+  assert.equal(world.tunnelSegments.length, segments);
+  assert.equal(scene.background.getHex(), 0x141020);
+  controller.update(0.01, 650);
+  assert.equal(controller.changed, false);
+});
+test("animation clips loop continuously and include run, transfer and additive landing", async () => {
+  const { createHumanClips } = await import("../src/graphics/human-motion.js");
+  const clips = createHumanClips();
+  assert.deepEqual(Object.keys(clips), ["run", "transfer", "landing"]);
+  for (const track of clips.run.tracks) {
+    assert.ok(track.values.every(Number.isFinite));
+    assert.ok(Math.abs(track.values[0] - track.values.at(-1)) < 0.0001);
+  }
+  assert.ok(clips.transfer.tracks.length > 20);
+  assert.equal(clips.landing.duration, 0.28);
+});
+test("rewarded ads never reward a cancellation or duplicate provider callbacks", async () => {
+  runtime();
+  const { RewardedAdService } = await import("../src/services/rewarded-ads.js");
+  const service = new RewardedAdService();
+  let callbacks,
+    rewards = 0,
+    cancelled = 0,
+    unavailable = 0;
+  service.requestRewardedAd({
+    onRewardGranted() {
+      rewards++;
+    },
+    onProviderUnavailable() {
+      unavailable++;
+    },
+  });
+  assert.equal(unavailable, 1);
+  assert.equal(rewards, 0);
+  service.registerProvider({
+    showRewardedAd(options) {
+      callbacks = options;
+    },
+  });
+  service.requestRewardedAd({
+    onRewardGranted() {
+      rewards++;
+    },
+    onAdDismissed() {
+      cancelled++;
+    },
+  });
+  callbacks.onCancel();
+  callbacks.onReward();
+  assert.equal(rewards, 0);
+  assert.equal(cancelled, 1);
+  service.requestRewardedAd({
+    onRewardGranted() {
+      rewards++;
+    },
+  });
+  callbacks.onReward();
+  callbacks.onReward();
+  assert.equal(rewards, 1);
+});
+test("retry starts immediately and each run can continue only once", () => {
+  const { GravityShiftGame } = runtime();
+  const game = new GravityShiftGame({
+    rendererFactory: () => ({
+      domElement: { addEventListener() {} },
+      setSize() {},
+      setPixelRatio() {},
+      render() {},
+    }),
+    hangarFactory: () => ({ isActive: false }),
+  });
+  game.startNewRun({ instant: true });
+  assert.equal(game.state, "PLAYING");
+  game.lastDeath = { type: "LASER", surfaceKey: "FLOOR" };
+  game.handleGameOver();
+  assert.equal(game.state, "GAMEOVER");
+  const balance = game.scoreMgr.saveData.totalEnergy;
+  assert.equal(game.continueRun({ useEnergy: true }), true);
+  assert.equal(game.scoreMgr.saveData.totalEnergy, balance - 50);
+  game.handleGameOver();
+  assert.equal(game.continueRun(), false);
+  game.startNewRun({ instant: true });
+  assert.equal(game.scoreMgr.reviveUsed, false);
+  assert.equal(game.state, "PLAYING");
+});
+test("H5 rewarded continuation waits for the completed placement before resuming", async () => {
+  runtime();
+  const { RewardedAdService } = await import("../src/services/rewarded-ads.js");
+  let placement,
+    rewards = 0;
+  window.adBreak = (options) => {
+    placement = options;
+  };
+  const service = new RewardedAdService();
+  service.requestRewardedAd({
+    onRewardGranted() {
+      rewards++;
+    },
+  });
+  placement.adViewed();
+  assert.equal(rewards, 0);
+  assert.equal(service.busy, true);
+  placement.adBreakDone({ breakStatus: "viewed" });
+  assert.equal(rewards, 1);
+  assert.equal(service.busy, false);
+  placement.adBreakDone({ breakStatus: "viewed" });
+  assert.equal(rewards, 1);
+});

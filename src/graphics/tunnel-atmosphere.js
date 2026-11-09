@@ -18,10 +18,12 @@ export function addTunnelAtmosphere(scene, segments) {
     roughness: 0.9,
   });
   segments.forEach((segment, index) => {
+    segment.userData.servicePanels = [];
     for (const sign of [-1, 1]) {
       const wall = new THREE.Mesh(panelGeo, panel);
       wall.position.set(sign * 6.91, -2.2, -2);
       segment.add(wall);
+      segment.userData.servicePanels.push(wall);
       for (let i = 0; i < 5; i++) {
         const slit = new THREE.Mesh(ventGeo, vent);
         slit.position.set(sign * 6.85, -2.9 + i * 0.3, -2);
@@ -45,4 +47,5 @@ export function addTunnelAtmosphere(scene, segments) {
   const fill = new THREE.PointLight(0xffbb85, 0.65, 42, 2);
   fill.position.set(3, 3, -18);
   scene.add(fill);
+  return { cool, warm };
 }

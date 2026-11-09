@@ -15,6 +15,7 @@ export class GravitySystem {
     this.lateralOffset = 0;
     this.targetLateralOffset = 0;
 
+    this.shiftSequence = 0;
     this.pendingSurface = null;
     this.isTransitioning = false;
     this.transitionElapsed = 0;
@@ -43,6 +44,8 @@ export class GravitySystem {
       this.pendingSurface = surfaceKey;
       return false;
     }
+    this.shiftSequence++;
+    this.lastDepartureSurface = this.currentSurface.id;
     this.startRollAngle = this.currentRollAngle;
     this.targetSurface = nextSurf;
     this.isTransitioning = true;
