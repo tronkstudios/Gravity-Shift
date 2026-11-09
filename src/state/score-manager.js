@@ -1,3 +1,4 @@
+import { validChallengeDate } from "../game/daily-challenge.js";
 import { ACHIEVEMENTS } from "../data/run-content.js";
 import { BrowserSaveStore } from "../persistence/browser-save-store.js";
 import { SKINS_CATALOG } from "../data/skins.js";
@@ -5,6 +6,7 @@ import { SKINS_CATALOG } from "../data/skins.js";
 export class ScoreManager {
   constructor(store = new BrowserSaveStore()) {
     this.store = store;
+    this.mode = "normal";
     this.storageKey = "GRAVITY_SHIFT_SAVE_V2";
     this.resetRun();
     this.loadSaveData();
@@ -27,6 +29,7 @@ export class ScoreManager {
 
   loadSaveData() {
     const defaults = {
+      dailyRecords: {},
       achievements: [],
       totalRuns: 0,
       bestScore: 0,
@@ -37,7 +40,7 @@ export class ScoreManager {
       settings: {
         transitionDuration: 0.2,
         cameraMode: "FULL",
-        graphics: "HIGH",
+        graphics: "AUTO",
         music: true,
         sfx: true,
         touchpad: true,
@@ -54,6 +57,23 @@ export class ScoreManager {
           ...parsed,
           settings: { ...defaults.settings, ...(parsed.settings || {}) },
         };
+        this.saveData.dailyRecords = {};
+        for (const [date, result] of Object.entries(parsed.dailyRecords || {})
+          .filter(([date]) => validChallengeDate(date))
+          .sort()
+          .slice(-32)) {
+          if (
+            result &&
+            Number.isFinite(result.score) &&
+            result.score >= 0 &&
+            Number.isFinite(result.distance) &&
+            result.distance >= 0
+          )
+            this.saveData.dailyRecords[date] = {
+              score: Math.floor(result.score),
+              distance: Math.floor(result.distance),
+            };
+        }
         this.saveData.achievements = Array.isArray(parsed.achievements)
           ? parsed.achievements.filter((id) =>
               ACHIEVEMENTS.some((a) => a.id === id),
@@ -90,14 +110,18 @@ export class ScoreManager {
       }
     } catch (e) {
       this.saveData = defaults;
+      this.saveStatus = "corrupt";
     }
   }
 
   persist() {
     try {
-      this.store.write(JSON.stringify(this.saveData));
-    } catch (e) {
-      // Ignore storage quota errors in restricted frames
+      const ok = this.store.write(JSON.stringify(this.saveData)) !== false;
+      this.saveStatus = ok ? "saved" : "error";
+      return ok;
+    } catch {
+      this.saveStatus = "error";
+      return false;
     }
   }
 
@@ -106,7 +130,11 @@ export class ScoreManager {
     this.checkAchievements();
     const dMeters = speed * dt * 0.45;
     this.distance += dMeters;
-    if (!this.missionCompleted && this.distance >= 250) {
+    if (
+      this.mode === "normal" &&
+      !this.missionCompleted &&
+      this.distance >= 250
+    ) {
       this.missionCompleted = true;
       this.runEnergy += 75;
       this.saveData.totalEnergy += 75;
@@ -123,20 +151,21 @@ export class ScoreManager {
     }
   }
 
-  collectOrb() {
+  collectOrb(value = 1) {
     this.collectedCoins++;
     this.checkAchievements();
-    this.runEnergy += 1;
-    this.saveData.totalEnergy += 1;
+    this.runEnergy += value;
+    if (this.mode === "normal") this.saveData.totalEnergy += value;
     this.streakProgress += 0.38;
     if (this.streakProgress >= 1.0) {
       this.streakProgress = 0.25;
       this.multiplier = Math.min(5.0, +(this.multiplier + 0.5).toFixed(1));
     }
-    this.score += 75 * this.multiplier;
+    this.score += 75 * this.multiplier * value;
   }
 
   checkAchievements() {
+    if (this.mode !== "normal") return;
     for (const achievement of ACHIEVEMENTS) {
       if (
         this[achievement.metric] >= achievement.target &&
@@ -158,6 +187,7 @@ export class ScoreManager {
     this.checkAchievements();
   }
   finalizeRun() {
+    if (this.mode !== "normal") return false;
     if (!this.runFinalized) {
       this.saveData.totalRuns++;
       this.runFinalized = true;

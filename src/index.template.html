@@ -57,7 +57,8 @@
       role="status"
       aria-live="assertive"
     >
-      <small>PREPARA EL CAMBIO</small><strong id="countdown-number">3</strong>
+      <small id="countdown-label">PREPARA EL CAMBIO</small
+      ><strong id="countdown-number">3</strong>
       <p>
         W / ↑ techo · S / ↓ suelo<br />A / ← izquierda · D / → derecha<br /><span
           >En móvil: desliza o toca las flechas</span
@@ -71,6 +72,50 @@
     <div id="perfect-feedback" class="perfect-feedback hidden" role="status">
       CAMBIO PERFECTO<small>PRECISIÓN + MULTIPLICADOR</small>
     </div>
+    <aside id="save-warning" hidden class="save-warning" role="status">
+      El progreso está solo en memoria.
+      <button id="btn-save-warning">Exportar copia</button>
+    </aside>
+    <section
+      id="share-panel"
+      hidden
+      class="share-panel"
+      role="dialog"
+      aria-label="Compartir reto diario"
+      aria-modal="true"
+    >
+      <div class="share-card">
+        <strong>Comparte el mismo recorrido</strong
+        ><input
+          id="daily-share-link"
+          readonly
+          aria-label="Enlace del reto diario"
+        />
+        <p>El récord es local. El reto cambia a medianoche, hora de Madrid.</p>
+        <button id="btn-close-share" class="brutal-btn">CERRAR</button>
+      </div>
+    </section>
+    <section
+      id="practice-complete"
+      class="practice-complete hidden"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Práctica completada"
+    >
+      <div class="brutal-card">
+        <span>ENTRENAMIENTO COMPLETADO</span>
+        <h2>Ya dominas la gravedad.</h2>
+        <p>
+          Has practicado las cuatro superficies, el ajuste lateral y el cambio
+          perfecto. No se han modificado tus monedas ni tus récords.
+        </p>
+        <button id="btn-practice-play" class="brutal-btn brutal-btn-primary">
+          JUGAR UNA PARTIDA</button
+        ><button id="btn-practice-menu" class="brutal-btn">
+          VOLVER AL MENÚ
+        </button>
+      </div>
+    </section>
     <!-- Toast Notification -->
     <div
       role="status"
@@ -182,7 +227,9 @@
           </p>
 
           <!-- Primary Action Buttons -->
-          <div class="w-full sm:w-auto flex flex-col sm:flex-row gap-3 pt-2">
+          <div
+            class="hero-cta w-full sm:w-auto flex flex-col sm:flex-row gap-3 pt-2"
+          >
             <button
               id="btn-start-game"
               class="brutal-btn brutal-btn-primary px-8 py-4 rounded text-xl font-bold flex items-center justify-center gap-3"
@@ -208,6 +255,23 @@
             </button>
           </div>
 
+          <div class="mode-cards">
+            <button id="btn-practice" class="mode-card">
+              <b>APRENDER</b><span>6 ejercicios · sin perder progreso</span>
+            </button>
+            <div class="mode-card daily-card">
+              <button id="btn-daily">
+                <b id="daily-label">RETO DIARIO</b
+                ><span id="daily-best">0 puntos · récord local</span></button
+              ><button
+                id="btn-share-daily"
+                class="share-daily"
+                aria-label="Compartir reto diario"
+              >
+                COMPARTIR ↗
+              </button>
+            </div>
+          </div>
           <div class="mission-card">
             <span class="mission-kicker"
               ><span id="achievement-progress">0 / 3 HAZAÑAS</span></span
@@ -447,14 +511,32 @@
           </div>
         </div>
 
+        <div id="practice-panel" class="practice-panel hidden" role="status">
+          <strong id="practice-title"></strong>
+          <p id="practice-hint"></p>
+        </div>
         <!-- Bottom HUD Row: Seed Info + Optional On-Screen 4G Directional Pad -->
         <div class="w-full max-w-7xl mx-auto flex items-end justify-between">
           <div
             class="brutal-card px-2.5 py-1 rounded font-mono text-[10px] text-coldwhite/60"
           >
-            <span id="hud-zone" class="zone-badge">01 · MUELLE INDUSTRIAL</span
+            <span id="hud-mode" class="mode-label">PARTIDA NORMAL</span
+            ><span id="hud-zone" class="zone-badge">01 · MUELLE INDUSTRIAL</span
             ><span id="hud-seed-badge">SEED: AUTO</span>
             <div class="run-mission">
+              <div id="lateral-controls" class="lateral-controls pointer-auto">
+                <button
+                  data-nudge="-1"
+                  aria-label="Desplazamiento lateral negativo"
+                >
+                  Q · ◀</button
+                ><button
+                  data-nudge="1"
+                  aria-label="Desplazamiento lateral positivo"
+                >
+                  ▶ · E
+                </button>
+              </div>
               <span id="mission-label">RETO 0 / 250 m</span>
               <div><i id="mission-bar"></i></div>
             </div>
@@ -811,15 +893,22 @@
               </div>
             </div>
             <div class="p-3 rounded bg-void border border-steel">
-              <div class="text-[10px] text-coldwhite/60">ENERGÍA RECOGIDA</div>
+              <div class="text-[10px] text-coldwhite/60">
+                <span id="go-energy-label">ENERGÍA RECOGIDA</span>
+              </div>
               <div id="go-energy" class="text-lg font-bold text-cyan">+0</div>
             </div>
             <div class="p-3 rounded bg-void border border-steel">
-              <div class="text-[10px] text-coldwhite/60">MEJOR RÉCORD</div>
+              <div class="text-[10px] text-coldwhite/60">
+                <span id="go-best-label">MEJOR RÉCORD</span>
+              </div>
               <div id="go-best" class="text-lg font-bold text-amber-400">0</div>
             </div>
           </div>
 
+          <button id="btn-share-result" hidden class="brutal-btn">
+            COMPARTIR ESTE RETO ↗
+          </button>
           <p id="go-reason" class="death-reason"></p>
           <p id="go-perfects" class="run-detail"></p>
           <button
@@ -929,6 +1018,7 @@
                 id="sel-graphics"
                 class="bg-void border border-steel rounded px-2.5 py-1.5 text-cyan"
               >
+                <option value="AUTO">AUTOMÁTICA · RECOMENDADA</option>
                 <option value="HIGH">ALTA (DPI NATIVO + NIEBLA)</option>
                 <option value="PERFORMANCE">RENDIMIENTO (60 FPS MÓVIL)</option>
               </select>
@@ -987,6 +1077,26 @@
             </div>
           </div>
 
+          <section class="save-tools">
+            <h3>TU PROGRESO</h3>
+            <p id="save-status"></p>
+            <p id="quality-status"></p>
+            <div>
+              <button id="btn-export-save" class="brutal-btn">
+                EXPORTAR COPIA</button
+              ><button id="btn-import-save" class="brutal-btn">
+                IMPORTAR COPIA</button
+              ><button id="btn-retry-save" class="brutal-btn">
+                REINTENTAR GUARDADO
+              </button>
+            </div>
+            <input
+              id="inp-import-save"
+              type="file"
+              accept="application/json,.json"
+              hidden
+            />
+          </section>
           <details class="developer-tools">
             <summary>Herramientas del proyecto</summary>
             <button

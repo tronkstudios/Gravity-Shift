@@ -52,3 +52,13 @@ La continuación pasa por una única acción del coordinador, tanto si cuesta en
 ## Orden de efectos y colisiones
 
 En cada paso fijo se detecta un candidato a cambio perfecto y se resuelven las colisiones antes de confirmar su recompensa. Un paso mortal no emite feedback de éxito. La salida de PLAYING limpia los efectos transitorios mediante GameUI y cancela los sonidos pendientes de AudioManager. Las pruebas cubren tanto muerte en el mismo paso como muerte con el cartel ya visible y el reinicio posterior.
+
+## Modos, entrada y persistencia portátil
+
+`input/swipe-gesture.js` reconoce una acción por gesto al cruzar el umbral; InputController la traduce a acciones del coordinador. La reanudación usa un estado RESUMING independiente, sin avanzar física ni puntuación durante la cuenta atrás.
+
+`game/practice-controller.js` declara seis ejercicios y reutiliza movimiento, monedas, colisiones y evaluación de precisión reales. `ScoreManager.mode` impide que práctica y reto diario modifiquen economía, hazañas o récords normales. El reto registra únicamente su récord por fecha mediante `game/daily-challenge.js`; la misma fecha produce la misma semilla, con calendario Europe/Madrid explícito. Compartir un enlace no cambia el acceso al sitio.
+
+`graphics/adaptive-quality.js` mide ventanas de fotogramas con histéresis y ajusta el renderer y la cantidad de partículas sin tocar las reglas de simulación. ProceduralWorld recicla mallas en pools acotados por tipo y reinicia sus transformaciones y metadatos al reutilizarlas.
+
+`persistence/save-backup.js` valida una lista explícita de campos y el formato de las copias. BrowserSaveStore informa del estado de lectura/escritura; un fallo conserva los datos de sesión. La importación solo sustituye el perfil tras validación y confirmación. Las pruebas cubren separación de modos, gesto temprano, pausa segura, pools, calidad adaptativa, semillas, enlaces e importación cancelada.

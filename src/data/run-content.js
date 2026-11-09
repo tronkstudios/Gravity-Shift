@@ -46,6 +46,26 @@ export const RUN_PHRASES = [
     hazards: ["BARRIER", "LASER", "HAZARD_ZONE"],
   },
 ];
+RUN_PHRASES.push(
+  {
+    id: "zigzag",
+    name: "ZIGZAG",
+    route: ["LEFT", "RIGHT", "LEFT"],
+    hazards: ["BARRIER", "MOVING", "LASER"],
+  },
+  {
+    id: "precision",
+    name: "PRECISIÓN",
+    route: ["FLOOR", "RIGHT", "CEILING"],
+    hazards: ["LASER", "BARRIER", "LASER"],
+  },
+  {
+    id: "inversion",
+    name: "INVERSIÓN",
+    route: ["CEILING", "FLOOR", "RIGHT"],
+    hazards: ["BARRIER", "LASER", "HAZARD_ZONE"],
+  },
+);
 export const ACHIEVEMENTS = [
   {
     id: "survivor",

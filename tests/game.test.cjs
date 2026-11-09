@@ -253,8 +253,12 @@ test("composed application starts, runs countdown, pauses and returns to menu", 
   assert.equal(game.state, "PLAYING");
   game.pauseGame();
   assert.equal(game.state, "PAUSED");
+  const pausedDistance = game.scoreMgr.distance;
   game.resumeGame();
+  assert.equal(game.state, "RESUMING");
+  while (game.state === "RESUMING") game.animate(game.lastTime + 50);
   assert.equal(game.state, "PLAYING");
+  assert.equal(game.scoreMgr.distance, pausedDistance);
   game.returnToMainMenu();
   assert.equal(game.state, "MENU");
 });
@@ -767,4 +771,344 @@ test("invisible shields cannot occlude particles and expired shields disappear i
   player.update(0.01, 30, gravity);
   assert.equal(player.shieldMesh.visible, false);
   assert.equal(player.shieldTimer, 0);
+});
+test("swipe fires during movement once per gesture and cancels multi-touch", async () => {
+  const { SwipeGesture } = await import("../src/input/swipe-gesture.js");
+  const swipe = new SwipeGesture(24);
+  swipe.begin(1, 100, 100);
+  assert.equal(swipe.move(1, 110, 100), null);
+  assert.equal(swipe.move(1, 135, 101), "RIGHT");
+  assert.equal(swipe.move(1, 160, 102), null);
+  swipe.cancel();
+  swipe.begin(2, 100, 100);
+  assert.equal(swipe.move(2, 100, 60), "CEILING");
+  swipe.cancel();
+  swipe.begin(3, 0, 0);
+  swipe.begin(4, 0, 0);
+  assert.equal(swipe.move(3, 70, 0), null);
+  assert.equal(swipe.move(4, 70, 0), null);
+});
+test("pointer input invokes the surface action before pointerup and never duplicates it", () => {
+  const { GravityShiftGame } = runtime(),
+    events = {};
+  const actions = [];
+  const game = new GravityShiftGame({
+    rendererFactory: () => ({
+      domElement: {
+        style: {},
+        addEventListener(type, handler) {
+          events[type] = handler;
+        },
+      },
+      setPixelRatio() {},
+      setSize() {},
+      render() {},
+    }),
+    hangarFactory: () => ({ isActive: false }),
+  });
+  game.startNewRun({ instant: true });
+  game.triggerSurfaceShift = (surface) => actions.push(surface);
+  events.pointerdown({
+    pointerId: 1,
+    clientX: 100,
+    clientY: 100,
+    pointerType: "touch",
+  });
+  events.pointermove({ pointerId: 1, clientX: 60, clientY: 100 });
+  assert.deepEqual(actions, ["LEFT"]);
+  events.pointerup({ pointerId: 1, clientX: 55, clientY: 100 });
+  assert.deepEqual(actions, ["LEFT"]);
+});
+test("resume countdown freezes hazards and can be cancelled back to pause", () => {
+  const { game, nodes } = visualGame();
+  game.pauseGame();
+  const distance = game.scoreMgr.distance;
+  const z = game.world.obstacles[0].mesh.position.z;
+  game.resumeGame();
+  game.animate(game.lastTime + 50);
+  assert.equal(game.state, "RESUMING");
+  assert.equal(game.scoreMgr.distance, distance);
+  assert.equal(game.world.obstacles[0].mesh.position.z, z);
+  game.cancelResume();
+  assert.equal(game.state, "PAUSED");
+  assert.equal(nodes.get("countdown").classList.contains("hidden"), true);
+  game.resumeGame();
+  while (game.state === "RESUMING") game.animate(game.lastTime + 50);
+  assert.equal(game.state, "PLAYING");
+  assert.equal(game.scoreMgr.distance, distance);
+});
+test("adaptive quality lowers after sustained slow frames and recovers gradually", async () => {
+  const { AdaptiveQuality } =
+    await import("../src/graphics/adaptive-quality.js");
+  const ratios = [],
+    profiles = [];
+  const quality = new AdaptiveQuality(
+    {
+      setPixelRatio(r) {
+        ratios.push(r);
+      },
+    },
+    2,
+    (p) => profiles.push(p),
+  );
+  quality.setMode("AUTO");
+  assert.equal(quality.ratio, 1.5);
+  for (let i = 0; i < 100; i++) quality.update(1 / 30);
+  assert.ok(quality.ratio < 1.5);
+  const low = quality.ratio;
+  for (let i = 0; i < 600; i++) quality.update(1 / 60);
+  assert.ok(quality.ratio > low);
+  quality.setMode("PERFORMANCE");
+  const fixed = quality.ratio;
+  for (let i = 0; i < 100; i++) quality.update(0.04);
+  assert.equal(quality.ratio, fixed);
+  quality.setMode("HIGH");
+  assert.equal(profiles.at(-1).particles, 60);
+  assert.equal(quality.ratio, 2);
+  const one = new AdaptiveQuality({ setPixelRatio() {} }, 1, (p) =>
+    profiles.push(p),
+  );
+  one.setMode("AUTO");
+  one.setMode("HIGH");
+  assert.equal(profiles.at(-1).label, "CALIDAD ALTA");
+});
+test("obstacles and coins reuse bounded pools and reset transforms and collision metadata", () => {
+  const { ProceduralWorld, THREE, SeededRNG } = runtime();
+  const world = new ProceduralWorld(new THREE.Scene(), new SeededRNG("POOL"));
+  world.spawnSurfaceObstacle("LEFT", -20, "LASER");
+  const mesh = world.obstacles[0].mesh;
+  world.obstacles[0].perfectCredited = true;
+  world.clearObjects();
+  world.spawnSurfaceObstacle("RIGHT", -40, "LASER");
+  assert.equal(world.obstacles[0].mesh, mesh);
+  assert.equal(world.obstacles[0].perfectCredited, undefined);
+  assert.equal(mesh.position.z, -40);
+  world.clearObjects();
+  world.spawnEnergyTrail("FLOOR", -20, 1, 4, 3);
+  const coin = world.collectibles[0].mesh;
+  world.clearObjects();
+  world.spawnEnergyTrail("FLOOR", -10, 1, 4, 1);
+  assert.equal(world.collectibles[0].mesh, coin);
+  assert.equal(coin.scale.x, 1);
+  assert.equal(world.collectibles[0].value, 1);
+  for (let i = 0; i < 100; i++)
+    world.spawnSurfaceObstacle("LEFT", -30, "BARRIER");
+  world.clearObjects();
+  assert.ok(world.obstaclePool.BARRIER.length <= 12);
+  assert.ok(world.coinPool.length <= 64);
+});
+test("rest sections have no hazards and risk coins precede a hazard without blocking the safe route", () => {
+  const { ProceduralWorld, THREE, SeededRNG } = runtime();
+  const world = new ProceduralWorld(new THREE.Scene(), new SeededRNG("REST"));
+  world.patternCounter = 3;
+  world.nextPatternZ = -50;
+  world.spawnNextPattern(500);
+  assert.equal(world.obstacles.length, 0);
+  assert.ok(world.collectibles.length >= 8);
+  world.clearObjects();
+  world.patternCounter = 4;
+  world.nextPatternZ = -80;
+  world.spawnNextPattern(500);
+  const bonus = world.collectibles.filter((c) => c.value === 3);
+  assert.equal(bonus.length, 3);
+  assert.ok(
+    bonus.every((coin) =>
+      world.obstacles.some(
+        (ob) =>
+          ob.surfaceKey === coin.surfaceKey &&
+          ob.mesh.position.z < coin.mesh.position.z,
+      ),
+    ),
+  );
+});
+test("practice and daily score calculation never changes normal currency, achievements or records", () => {
+  const { ScoreManager } = runtime();
+  const score = new ScoreManager();
+  const before = JSON.stringify(score.saveData);
+  for (const mode of ["practice", "daily"]) {
+    score.mode = mode;
+    score.resetRun();
+    score.updateFrame(100, 50);
+    for (let i = 0; i < 60; i++) score.collectOrb(3);
+    for (let i = 0; i < 8; i++) score.awardPerfect();
+    assert.equal(score.finalizeRun(), false);
+    assert.equal(JSON.stringify(score.saveData), before);
+  }
+});
+test("practice covers all surfaces, lateral controls and a real timed perfect change", () => {
+  const { game } = visualGame();
+  const before = JSON.stringify(game.scoreMgr.saveData);
+  game.startNewRun({ mode: "practice", instant: true });
+  assert.equal(game.practice.stage.surface, "FLOOR");
+  assert.equal(game.world.obstacles.length, 0);
+  game.scoreMgr.collectOrb();
+  game.scoreMgr.collectOrb();
+  game.scoreMgr.collectOrb();
+  game.practice.update(0.01, game);
+  assert.equal(game.practice.stage.surface, "CEILING");
+  for (const surface of ["LEFT", "RIGHT"]) {
+    game.scoreMgr.collectOrb();
+    game.practice.update(0.01, game);
+    assert.equal(game.practice.stage.surface, surface);
+  }
+  game.scoreMgr.collectOrb();
+  game.practice.update(0.01, game);
+  assert.equal(game.practice.stage.goal, "lateral");
+  game.gravitySys.nudgeLateral(1);
+  game.practice.update(0.01, game);
+  assert.equal(game.practice.stage.goal, "perfect");
+  assert.equal(game.world.obstacles.length, 1);
+  game.scoreMgr.awardPerfect();
+  game.practice.update(0.01, game);
+  assert.equal(game.practice.done, true);
+  assert.equal(JSON.stringify(game.scoreMgr.saveData), before);
+});
+test("practice collision retries its exercise without dying or spending energy", () => {
+  const { game } = visualGame();
+  game.startNewRun({ mode: "practice", instant: true });
+  const balance = game.scoreMgr.saveData.totalEnergy;
+  game.handleGameOver();
+  assert.equal(game.state, "PLAYING");
+  assert.equal(game.practice.pendingRetry, true);
+  game.practice.update(0.02, game);
+  assert.equal(game.practice.pendingRetry, false);
+  assert.equal(game.scoreMgr.saveData.totalEnergy, balance);
+  assert.equal(game.continueRun({ useEnergy: true }), false);
+});
+test("daily dates, seeds and links agree across time zones and reject impossible dates", async () => {
+  const { dailyDate, dailySeed, validChallengeDate, challengeUrl } =
+    await import("../src/game/daily-challenge.js");
+  assert.equal(dailyDate(new Date("2026-11-09T22:59:59Z")), "2026-11-09");
+  assert.equal(dailyDate(new Date("2026-11-09T23:00:00Z")), "2026-11-10");
+  assert.equal(dailyDate(new Date("2026-07-01T22:00:00Z")), "2026-07-02");
+  assert.equal(dailySeed("2026-11-09"), "DAILY-2026-11-09");
+  assert.equal(validChallengeDate("2026-02-30"), false);
+  assert.equal(
+    challengeUrl("https://game.example/?other=secret#old", "2026-11-09"),
+    "https://game.example/?daily=2026-11-09",
+  );
+});
+test("daily runs replay the same layout, save an independent record and forbid continuation", () => {
+  const { game } = visualGame();
+  const profile = game.scoreMgr.saveData,
+    balance = profile.totalEnergy,
+    best = profile.bestScore;
+  game.startNewRun({
+    mode: "daily",
+    challengeDate: "2026-11-09",
+    instant: true,
+  });
+  const signature = () =>
+    game.world.obstacles.map((ob) => [
+      ob.type,
+      ob.surfaceKey,
+      ob.mesh.position.z,
+      ob.phase,
+    ]);
+  const first = signature();
+  game.scoreMgr.score = 1234;
+  game.scoreMgr.distance = 70;
+  game.handleGameOver();
+  assert.equal(profile.dailyRecords["2026-11-09"].score, 1234);
+  assert.equal(profile.bestScore, best);
+  assert.equal(profile.totalEnergy, balance);
+  assert.equal(game.continueRun(), false);
+  game.startNewRun({
+    mode: "daily",
+    challengeDate: "2026-11-09",
+    instant: true,
+  });
+  assert.deepEqual(signature(), first);
+  assert.equal(game.gravitySys.transitionDuration, 0.24);
+});
+test("save backup round trips progress and rejects malformed input without touching the live profile", async () => {
+  const { parseBackup, exportBackup } =
+    await import("../src/persistence/save-backup.js");
+  const { ScoreManager } = runtime();
+  const score = new ScoreManager();
+  score.saveData.unlockedSkins.push("phantom");
+  score.saveData.dailyRecords["2026-11-09"] = { score: 42, distance: 12 };
+  const restored = parseBackup(exportBackup(score.saveData));
+  assert.ok(restored.unlockedSkins.includes("phantom"));
+  assert.equal(restored.dailyRecords["2026-11-09"].score, 42);
+  const before = JSON.stringify(score.saveData);
+  assert.throws(() => parseBackup("{bad json"));
+  assert.throws(() =>
+    parseBackup(
+      JSON.stringify({
+        game: "gravity-shift",
+        version: 2,
+        profile: { totalEnergy: -1, unlockedSkins: ["core"] },
+      }),
+    ),
+  );
+  assert.equal(JSON.stringify(score.saveData), before);
+});
+test("storage failure is observable and does not destroy in-memory progress", async () => {
+  const { BrowserSaveStore } =
+    await import("../src/persistence/browser-save-store.js");
+  const { ScoreManager } = runtime();
+  globalThis.localStorage = {
+    getItem() {
+      throw new Error("blocked");
+    },
+    setItem() {
+      throw new Error("quota");
+    },
+    removeItem() {
+      throw new Error("blocked");
+    },
+  };
+  const store = new BrowserSaveStore(),
+    score = new ScoreManager(store);
+  assert.equal(store.status, "unavailable");
+  score.collectOrb();
+  const energy = score.saveData.totalEnergy;
+  assert.equal(score.persist(), false);
+  assert.equal(score.saveStatus, "error");
+  assert.equal(score.saveData.totalEnergy, energy);
+});
+test("import preview is validated before confirmation and cancellation preserves current progress", async () => {
+  const { exportBackup } = await import("../src/persistence/save-backup.js");
+  const { game } = visualGame();
+  const original = game.scoreMgr.saveData;
+  const text = exportBackup({ ...original, totalEnergy: 999 });
+  window.confirm = () => false;
+  assert.equal(game.ui.importSave(text), false);
+  assert.equal(game.scoreMgr.saveData, original);
+  assert.throws(() => game.ui.importSave("invalid"));
+  assert.equal(game.scoreMgr.saveData, original);
+  window.confirm = () => true;
+  assert.equal(game.ui.importSave(text), true);
+  assert.equal(game.scoreMgr.saveData.totalEnergy, 999);
+});
+test("shared daily links pin the requested date and keep that date for result sharing", () => {
+  const { game, nodes } = visualGame();
+  game.returnToMainMenu();
+  window.location = { href: "https://game.example/?daily=2026-11-08" };
+  game.loadSharedDaily();
+  assert.equal(game.challengeDate, "2026-11-08");
+  assert.equal(game.linkChallenge, true);
+  assert.ok(nodes.get("daily-label").textContent.includes("2026-11-08"));
+  game.startNewRun({
+    mode: "daily",
+    challengeDate: game.challengeDate,
+    instant: true,
+  });
+  assert.equal(game.ui.selectedDailyDate(), "2026-11-08");
+});
+test("finishing practice opens its completion screen and never modifies the profile", () => {
+  const { game, nodes } = visualGame();
+  const before = JSON.stringify(game.scoreMgr.saveData);
+  game.startNewRun({ mode: "practice", instant: true });
+  game.practice.index = 5;
+  game.practice.enter(game);
+  game.scoreMgr.awardPerfect();
+  game.animate(game.lastTime + 10);
+  assert.equal(game.state, "PRACTICE_DONE");
+  assert.equal(
+    nodes.get("practice-complete").classList.contains("hidden"),
+    false,
+  );
+  assert.equal(JSON.stringify(game.scoreMgr.saveData), before);
 });

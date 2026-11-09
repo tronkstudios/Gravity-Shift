@@ -1,12 +1,19 @@
+import { SwipeGesture } from "../input/swipe-gesture.js";
+import { dailyDate } from "../game/daily-challenge.js";
+import { MAX_BACKUP_BYTES } from "../persistence/save-backup.js";
 export class InputController {
   constructor(game) {
     this.game = game;
   }
   bind() {
     document.getElementById("btn-cancel-countdown").onclick = () =>
-      this.game.returnToMainMenu();
+      this.game.state === "RESUMING"
+        ? this.game.cancelResume()
+        : this.game.returnToMainMenu();
     document.addEventListener("visibilitychange", () => {
       if (document.hidden) {
+        this.swipe?.cancel();
+        if (this.game.state === "RESUMING") this.game.cancelResume();
         if (this.game.state === "PLAYING") this.game.pauseGame();
         if (this.game.state === "COUNTDOWN") this.game.returnToMainMenu();
         this.game.scoreMgr.persist();
@@ -15,7 +22,9 @@ export class InputController {
       this.game.fixedAccumulator = 0;
     });
     window.addEventListener("blur", () => {
+      this.swipe?.cancel();
       if (this.game.state === "PLAYING") this.game.pauseGame();
+      if (this.game.state === "RESUMING") this.game.cancelResume();
     });
     window.addEventListener("resize", () => {
       this.game.camera.aspect = window.innerWidth / window.innerHeight;
@@ -28,9 +37,13 @@ export class InputController {
 
     // Keyboard Controls (W/S/A/D + Arrow Keys for 4 Surfaces, Q/E for lateral adjustment, ESC for Pause)
     window.addEventListener("keydown", (e) => {
-      if (e.target.matches("input,select,textarea") || e.repeat) return;
+      if (e.target?.matches?.("input,select,textarea") || e.repeat) return;
       const code = e.code;
       if (code === "Escape") {
+        if (this.game.state === "RESUMING") {
+          this.game.cancelResume();
+          return;
+        }
         if (this.game.state === "COUNTDOWN") {
           this.game.returnToMainMenu();
           return;
@@ -61,40 +74,50 @@ export class InputController {
       }
     });
 
-    // Touch Swipe Gesture Controls on Gameplay Viewport
-    let touchStartX = 0;
-    let touchStartY = 0;
+    this.swipe = new SwipeGesture();
     const canvasEl = this.game.renderer.domElement;
-
-    canvasEl.addEventListener(
-      "touchstart",
-      (e) => {
-        if (e.touches.length > 0) {
-          touchStartX = e.touches[0].clientX;
-          touchStartY = e.touches[0].clientY;
-        }
-      },
-      { passive: true },
-    );
-
-    canvasEl.addEventListener(
-      "touchend",
-      (e) => {
-        if (this.game.state !== "PLAYING" || e.changedTouches.length === 0)
-          return;
-        const dx = e.changedTouches[0].clientX - touchStartX;
-        const dy = e.changedTouches[0].clientY - touchStartY;
-        if (Math.max(Math.abs(dx), Math.abs(dy)) < 24) return;
-
-        if (Math.abs(dy) > Math.abs(dx)) {
-          if (dy < 0) this.game.triggerSurfaceShift("CEILING");
-          else this.game.triggerSurfaceShift("FLOOR");
-        } else {
-          if (dx < 0) this.game.triggerSurfaceShift("LEFT");
-          else this.game.triggerSurfaceShift("RIGHT");
-        }
-      },
-      { passive: true },
+    if (canvasEl.style) canvasEl.style.touchAction = "none";
+    canvasEl.addEventListener("pointerdown", (event) => {
+      if (
+        this.game.state !== "PLAYING" ||
+        (event.pointerType === "mouse" && event.button !== 0)
+      )
+        return;
+      this.swipe.begin(event.pointerId, event.clientX, event.clientY);
+      try {
+        canvasEl.setPointerCapture?.(event.pointerId);
+      } catch {}
+    });
+    canvasEl.addEventListener("pointermove", (event) => {
+      if (this.game.state !== "PLAYING") {
+        this.swipe.cancel();
+        return;
+      }
+      const surface = this.swipe.move(
+        event.pointerId,
+        event.clientX,
+        event.clientY,
+      );
+      if (surface) this.game.triggerSurfaceShift(surface);
+    });
+    canvasEl.addEventListener("pointerup", (event) => {
+      if (this.game.state === "PLAYING") {
+        const surface = this.swipe.move(
+          event.pointerId,
+          event.clientX,
+          event.clientY,
+        );
+        if (surface) this.game.triggerSurfaceShift(surface);
+      }
+      this.swipe.cancel();
+    });
+    canvasEl.addEventListener("pointercancel", () => this.swipe.cancel());
+    canvasEl.addEventListener("lostpointercapture", () => this.swipe.cancel());
+    document.querySelectorAll("[data-nudge]").forEach((button) =>
+      button.addEventListener("click", () => {
+        if (this.game.state === "PLAYING")
+          this.game.gravitySys.nudgeLateral(Number(button.dataset.nudge));
+      }),
     );
 
     // On-Screen 4G Directional Pad Buttons
@@ -128,7 +151,10 @@ export class InputController {
       .getElementById("btn-restart-pause")
       .addEventListener("click", () => {
         this.game.audio.playUIClick();
-        this.game.startNewRun();
+        this.game.startNewRun({
+          mode: this.game.runMode,
+          challengeDate: this.game.challengeDate,
+        });
       });
 
     document.getElementById("btn-quit-pause").addEventListener("click", () => {
@@ -138,7 +164,11 @@ export class InputController {
 
     document.getElementById("btn-retry-game").addEventListener("click", () => {
       this.game.audio.playUIClick();
-      this.game.startNewRun({ instant: true });
+      this.game.startNewRun({
+        instant: true,
+        mode: this.game.runMode,
+        challengeDate: this.game.challengeDate,
+      });
     });
 
     document
@@ -225,6 +255,69 @@ export class InputController {
       });
     });
 
+    document
+      .getElementById("btn-practice")
+      .addEventListener("click", () =>
+        this.game.startNewRun({ mode: "practice" }),
+      );
+    document.getElementById("btn-daily").addEventListener("click", () =>
+      this.game.startNewRun({
+        mode: "daily",
+        challengeDate: this.game.linkChallenge
+          ? this.game.challengeDate
+          : dailyDate(),
+      }),
+    );
+    document
+      .getElementById("btn-share-daily")
+      .addEventListener("click", () => this.game.ui.shareDaily());
+    document
+      .getElementById("btn-share-result")
+      .addEventListener("click", () => this.game.ui.shareDaily());
+    document.getElementById("btn-close-share").addEventListener("click", () => {
+      document.getElementById("share-panel").hidden = true;
+    });
+    document
+      .getElementById("btn-practice-menu")
+      .addEventListener("click", () => this.game.returnToMainMenu());
+    document
+      .getElementById("btn-practice-play")
+      .addEventListener("click", () =>
+        this.game.startNewRun({ mode: "normal" }),
+      );
+    document
+      .getElementById("btn-save-warning")
+      .addEventListener("click", () => this.game.ui.exportSave());
+    document
+      .getElementById("btn-export-save")
+      .addEventListener("click", () => this.game.ui.exportSave());
+    document
+      .getElementById("btn-import-save")
+      .addEventListener("click", () =>
+        document.getElementById("inp-import-save").click(),
+      );
+    document.getElementById("btn-retry-save").addEventListener("click", () => {
+      this.game.scoreMgr.persist();
+      this.game.ui.updateSaveStatus();
+    });
+    document
+      .getElementById("inp-import-save")
+      .addEventListener("change", async (event) => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+        try {
+          if (file.size > MAX_BACKUP_BYTES)
+            throw new Error("La copia supera el tamaño permitido");
+          this.game.ui.importSave(await file.text());
+        } catch (error) {
+          this.game.ui.showToast(
+            error.message || "No se pudo importar la copia",
+          );
+        } finally {
+          event.target.value = "";
+        }
+      });
+
     // Settings Modal
     document
       .getElementById("btn-open-settings")
@@ -272,8 +365,20 @@ export class InputController {
       });
 
     document.getElementById("btn-reset-save").addEventListener("click", () => {
-      this.game.scoreMgr.store.remove();
+      if (
+        !window.confirm(
+          "¿Borrar el progreso de este navegador? Exporta una copia antes si quieres conservarlo.",
+        )
+      )
+        return;
+      if (this.game.scoreMgr.store.remove() === false) {
+        this.game.scoreMgr.saveStatus = "error";
+        this.game.ui.updateSaveStatus();
+        this.game.ui.showToast("NO SE PUDO BORRAR EL PROGRESO");
+        return;
+      }
       this.game.scoreMgr.loadSaveData();
+      this.game.scoreMgr.persist();
       this.game.applySavedSettings();
       this.game.ui.refreshAllUI();
       document.getElementById("modal-settings").classList.add("hidden");

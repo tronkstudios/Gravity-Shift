@@ -1,3 +1,5 @@
+import { dailyDate, challengeUrl } from "../game/daily-challenge.js";
+import { exportBackup, parseBackup } from "../persistence/save-backup.js";
 import { ACHIEVEMENTS } from "../data/run-content.js";
 import { SURFACES } from "../config/surfaces.js";
 import { RARITY_META } from "../data/skins.js";
@@ -93,6 +95,102 @@ export class GameUI {
     if (arrow) {
       arrow.style.transform = `rotate(${surf.compassArrowRot - 45}deg)`;
     }
+  }
+
+  updateSaveStatus() {
+    const score = this.game.scoreMgr,
+      status = score.saveStatus || score.store.status;
+    const error =
+      status === "error" || status === "unavailable" || status === "corrupt";
+    document.getElementById("save-warning").hidden = !error;
+    document.getElementById("save-status").textContent = error
+      ? "El progreso está solo en memoria. Exporta una copia."
+      : status === "saved"
+        ? "Progreso guardado en este dispositivo."
+        : "Guardado local disponible.";
+    document.getElementById("quality-status").textContent =
+      this.game.qualityLabel || "AUTO";
+  }
+  exportSave() {
+    this.triggerFileDownload(
+      "gravity-shift-save.json",
+      exportBackup(this.game.scoreMgr.saveData),
+      "application/json",
+    );
+  }
+  importSave(text) {
+    const profile = parseBackup(text);
+    if (
+      !window.confirm(
+        `Importar ${profile.unlockedSkins.length} personajes y ${profile.totalEnergy} monedas sustituirá el progreso actual de este navegador. ¿Continuar?`,
+      )
+    )
+      return false;
+    this.game.scoreMgr.saveData = profile;
+    const stored = this.game.scoreMgr.persist();
+    this.game.applySavedSettings();
+    this.refreshAllUI();
+    this.showToast(
+      stored
+        ? "COPIA IMPORTADA Y GUARDADA"
+        : "COPIA IMPORTADA EN MEMORIA · EXPORTA UN RESPALDO",
+    );
+    return true;
+  }
+  selectedDailyDate() {
+    return this.game.runMode === "daily" && this.game.state !== "MENU"
+      ? this.game.challengeDate
+      : this.game.linkChallenge
+        ? this.game.challengeDate
+        : dailyDate();
+  }
+  closeShare() {
+    document.getElementById("share-panel").hidden = true;
+    document.querySelector?.(".ui-layer")?.removeAttribute("inert");
+  }
+  async shareDaily() {
+    const date = this.selectedDailyDate(),
+      url = challengeUrl(window.location.href, date),
+      best = this.game.scoreMgr.saveData.dailyRecords[date]?.score || 0;
+    const text = `Gravity Shift · reto ${date}. Mi récord local: ${best} puntos. ¿Lo superas?`;
+    const panel = document.getElementById("share-panel"),
+      input = document.getElementById("daily-share-link");
+    input.value = url;
+    panel.hidden = false;
+    document.querySelector?.(".ui-layer")?.setAttribute("inert", "");
+    if (globalThis.navigator?.share) {
+      try {
+        await navigator.share({
+          title: "Reto diario Gravity Shift",
+          text,
+          url,
+        });
+        this.closeShare();
+        return;
+      } catch {}
+    }
+    if (globalThis.navigator?.clipboard?.writeText) {
+      try {
+        await navigator.clipboard.writeText(url);
+        this.showToast("ENLACE DEL RETO COPIADO");
+      } catch {}
+    }
+  }
+  updatePractice() {
+    const practice = this.game.practice;
+    if (!practice) return;
+    document.getElementById("practice-title").textContent =
+      practice.stage.label;
+    let hint = practice.stage.hint;
+    const barrier = this.game.world.obstacles[0];
+    if (
+      practice.stage.goal === "perfect" &&
+      barrier &&
+      barrier.mesh.position.z >= -this.game.currentSpeed * 0.65 &&
+      barrier.mesh.position.z <= -this.game.currentSpeed * 0.12
+    )
+      hint = "AHORA · CAMBIA A UNA PARED";
+    document.getElementById("practice-hint").textContent = hint;
   }
 
   clearTransientFeedback() {
@@ -359,6 +457,13 @@ export class GameUI {
   }
 
   refreshAllUI() {
+    this.updateSaveStatus();
+    const date = this.selectedDailyDate();
+    document.getElementById("daily-label").textContent = "RETO " + date;
+    document.getElementById("daily-best").textContent =
+      (
+        this.game.scoreMgr.saveData.dailyRecords[date]?.score || 0
+      ).toLocaleString() + " puntos · récord local";
     const save = this.game.scoreMgr.saveData;
     document.getElementById("achievement-progress").textContent =
       `${save.achievements.length} / ${ACHIEVEMENTS.length} HAZAÑAS`;
@@ -386,14 +491,33 @@ export class GameUI {
   }
 
   updateHUD() {
+    this.updateSaveStatus();
     this.updateCompassUI(this.game.gravitySys.targetSurface.id);
-    const completed = this.game.scoreMgr.missionCompleted;
-    const label = completed
-      ? "RETO COMPLETADO · +75 ENERGÍA"
-      : `RETO ${Math.floor(this.game.scoreMgr.distance)} / 250 m`;
+    const score = this.game.scoreMgr;
+    const best =
+      score.saveData.dailyRecords[this.game.challengeDate]?.score || 0;
+    const label =
+      this.game.runMode === "practice"
+        ? "PRÁCTICA · SIN RECOMPENSAS"
+        : this.game.runMode === "daily"
+          ? best
+            ? `RÉCORD DEL RETO: ${best}`
+            : "MARCA EL PRIMER RÉCORD DEL RETO"
+          : score.missionCompleted
+            ? "RETO COMPLETADO · +75 ENERGÍA"
+            : `RETO ${Math.floor(score.distance)} / 250 m`;
+    const progress =
+      this.game.runMode === "practice"
+        ? this.game.practice?.done
+          ? 100
+          : ((this.game.practice?.index || 0) / 6) * 100
+        : this.game.runMode === "daily"
+          ? best
+            ? Math.min(100, (score.score / best) * 100)
+            : 0
+          : Math.min(100, score.distance / 2.5);
     document.getElementById("mission-label").textContent = label;
-    document.getElementById("mission-bar").style.width =
-      Math.min(100, this.game.scoreMgr.distance / 2.5) + "%";
+    document.getElementById("mission-bar").style.width = progress + "%";
     const hazard = this.game.world.obstacles.some(
       (ob) =>
         ob.mesh.position.z < 0 &&
@@ -432,7 +556,9 @@ export class GameUI {
     document.getElementById("hud-speed").textContent =
       Math.floor(this.game.currentSpeed) + " m/s";
     document.getElementById("hud-energy").textContent =
-      this.game.scoreMgr.saveData.totalEnergy;
+      this.game.runMode && this.game.runMode !== "normal"
+        ? this.game.scoreMgr.runEnergy
+        : this.game.scoreMgr.saveData.totalEnergy;
     document.getElementById("hud-multiplier").textContent =
       "x" + this.game.scoreMgr.multiplier.toFixed(1);
     document.getElementById("hud-mult-bar").style.width =

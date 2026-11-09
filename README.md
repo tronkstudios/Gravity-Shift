@@ -9,15 +9,27 @@ Runner 3D de cuatro superficies con partidas rápidas, cambios perfectos y tres 
 - Cambiar desde una superficie amenazada entre 0,12 y 0,65 segundos antes de un obstáculo, hacia una superficie libre, concede un cambio perfecto: puntos, multiplicador, sonido y estela. Cada obstáculo puede puntuar una sola vez.
 - El primer inicio incluye instrucciones y cuenta atrás; reintentar tras perder es inmediato. El resumen explica la colisión.
 
+## Modos y controles
+
+- **Normal:** conserva la economía, hazañas y récord general.
+- **Aprender:** seis ejercicios sobre suelo, techo, paredes, desplazamiento lateral y cambio perfecto. Los errores repiten el ejercicio; no se gastan ni añaden monedas, no se desbloquean personajes y no se alteran récords.
+- **Reto diario:** fecha y semilla comunes para todos, con cambio de día a las 00:00 de Europe/Madrid. El enlace `?daily=AAAA-MM-DD` permite repetir el mismo reto, también de días anteriores. Se guarda el mejor resultado local de hasta 32 fechas, separado del récord normal. No hay continuaciones ni recompensas de perfil y la duración de cambio se fija en 0,24 s para igualar las reglas.
+
+El gesto móvil responde al superar 24 píxeles de desplazamiento, sin esperar a levantar el dedo, y emite una sola acción por gesto. Los botones Q/E proporcionan el ajuste lateral también en móvil. Al reanudar una pausa hay dos segundos de cuenta atrás durante los que la simulación permanece detenida; se puede cancelar para volver a pausa.
+
+Los enlaces comparten la fecha del reto, no los permisos de acceso al alojamiento. Quien lo abra debe poder acceder al sitio. No hay clasificación online ni verificación remota de resultados.
+
 ## Contenido
 
-Tres secuencias de tres pasos (ascenso, contracurva y regreso) se combinan en un recorrido continuo. La apertura enseña el suelo, las paredes y el techo; cada fila conserva una ruta segura con monedas y separación para reaccionar. El inicio se mantiene reproducible y las secuencias posteriores se eligen con la semilla.
+Seis secuencias de tres pasos (ascenso, contracurva, regreso, zigzag, precisión e inversión) se combinan en un recorrido continuo. La apertura enseña el suelo, las paredes y el techo; cada fila conserva una ruta segura con monedas y separación para reaccionar. El inicio se mantiene reproducible y las secuencias posteriores se eligen con la semilla.
 
 | Sector             | Entrada | Identidad                                                   |
 | ------------------ | ------- | ----------------------------------------------------------- |
 | Muelle industrial  | 0 m     | Guías cian y una superficie bloqueada por paso              |
 | Núcleo del reactor | 250 m   | Luz ámbar, nueva línea musical y dos superficies bloqueadas |
 | Sector fracturado  | 650 m   | Tonos violeta, paneles inclinados y bloques móviles         |
+
+Después de cada tres secuencias hay un tramo de descanso sin obstáculos. Las monedas rosas valen ×3 en puntos y energía y se sitúan antes de un obstáculo: puedes asumir el riesgo para recogerlas y cambiar a la ruta segura, o seguir las monedas doradas normales.
 
 Cada sector cambia la iluminación progresivamente y tiene su línea musical. El menú muestra una partida automática independiente desde el interior del túnel. Sus monedas y esquives no afectan al progreso del jugador.
 
@@ -57,6 +69,12 @@ La URL local es `http://localhost:4173`. Reconstruye y recarga después de edita
 
 Los módulos de `src/` y `styles.css` son la fuente de verdad. `index.html`, `game.js` y `dist/` se generan y se excluyen de Git. Three.js 0.128.0 y Tailwind se incluyen en la compilación; fuentes e iconos se descargan desde sus CDN. [Arquitectura y dependencias](docs/architecture.md).
 
+## Calidad y protección del progreso
+
+En Ajustes puedes elegir **Automática**, **Alta** o **Rendimiento**. Automática reduce gradualmente resolución y partículas cuando la tasa de fotogramas es baja de forma sostenida y recupera calidad cuando vuelve a ser estable. Las opciones manuales se respetan; los perfiles existentes conservan su selección. Obstáculos y monedas usan pools limitados para reutilizar mallas y geometrías entre secuencias.
+
+El estado del guardado se muestra en Ajustes y aparece un aviso si el navegador no puede guardar. **Exportar copia** descarga el progreso y los récords diarios en JSON. **Importar copia** valida formato, tamaño y campos antes de pedir confirmación para sustituir el perfil; cancelar o importar un archivo inválido mantiene el progreso actual. Borrar el progreso también pide confirmación. Si el almacenamiento está bloqueado, se conserva el perfil en memoria y se puede exportar.
+
 ## Estabilidad visual
 
 Las recompensas de cambio perfecto se confirman después de resolver colisiones. Morir, pausar, volver al menú o reiniciar limpia sus mensajes, destellos y sonidos pendientes. La cámara usa la orientación actual del personaje, reinicia su pose al reintentar e interpola el giro sin pasar por un vector vertical nulo. Las sacudidas son suaves y amortiguadas.
@@ -65,6 +83,6 @@ El escudo inactivo no dibuja ni escribe profundidad. Las partículas no escriben
 
 ## Verificación y límites
 
-29 pruebas cubren guardado, economía, colisiones a 20 FPS, rutas seguras, cambios perfectos, sectores, hazañas, animaciones, recompensas publicitarias, reintento, continuación y límites de módulos. Los tests de aplicación usan un renderer de prueba: no sustituyen una revisión visual WebGL en navegador ni en dispositivos.
+45 pruebas cubren guardado, economía, colisiones a 20 FPS, rutas seguras, cambios perfectos, sectores, hazañas, animaciones, recompensas publicitarias, reintento, continuación y límites de módulos. Los tests de aplicación usan un renderer de prueba: no sustituyen una revisión visual WebGL en navegador ni en dispositivos.
 
 El progreso solo se guarda en localStorage, conservando `GRAVITY_SHIFT_SAVE_V2`. No hay backend, transferencia automática entre dominios ni clasificaciones remotas. La entrega es web; no contiene binarios firmados ni publicaciones en App Store o Google Play.

@@ -2,6 +2,7 @@ import { GravityShiftGame } from "./app/game.js";
 window.addEventListener("load", () => {
   try {
     window.gravityShiftGame = new GravityShiftGame();
+    window.gravityShiftGame.loadSharedDaily();
   } catch (error) {
     console.error("Unable to start Gravity Shift", error);
     const message = document.createElement("div");

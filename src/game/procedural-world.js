@@ -14,6 +14,8 @@ export class ProceduralWorld {
     this.tunnelSegments = [];
     this.obstacles = [];
     this.collectibles = [];
+    this.obstaclePool = { BARRIER: [], LASER: [], HAZARD_ZONE: [], MOVING: [] };
+    this.coinPool = [];
 
     this.nextSegmentZ = 20;
     this.nextPatternZ = -48;
@@ -278,22 +280,39 @@ export class ProceduralWorld {
     this.scene.remove(mesh);
   }
 
-  resetWorld() {
-    this.elapsed = 0;
-    this.obstacles.forEach((o) => this.releaseMesh(o.mesh));
-    this.collectibles.forEach((c) => this.releaseMesh(c.mesh));
+  recycleObstacle(ob) {
+    this.scene.remove(ob.mesh);
+    const pool = this.obstaclePool[ob.type];
+    if (pool && pool.length < 12) pool.push(ob.mesh);
+    else this.releaseMesh(ob.mesh);
+  }
+  recycleCoin(coin) {
+    this.scene.remove(coin.mesh);
+    if (this.coinPool.length < 64) this.coinPool.push(coin.mesh);
+    else this.releaseMesh(coin.mesh);
+  }
+  clearObjects() {
+    this.obstacles.forEach((ob) => this.recycleObstacle(ob));
+    this.collectibles.forEach((coin) => this.recycleCoin(coin));
     this.obstacles = [];
     this.collectibles = [];
+  }
+
+  resetWorld() {
+    this.elapsed = 0;
+    this.clearObjects();
 
     this.nextPatternZ = -52;
     this.patternCounter = 0;
+    this.lastSafeSurface = "FLOOR";
 
     while (this.nextPatternZ > -TUNNEL.VISIBLE_AHEAD) this.spawnNextPattern(0);
   }
 
   spawnSurfaceObstacle(surfaceKey, zPos, type = "BARRIER") {
     const surf = SURFACES[surfaceKey];
-    const group = new THREE.Group();
+    const cached = this.obstaclePool[type]?.pop();
+    const group = cached || new THREE.Group();
     group.position.set(surf.basePos.x, surf.basePos.y, zPos);
     group.quaternion.setFromAxisAngle(
       new THREE.Vector3(0, 0, 1),
@@ -304,67 +323,75 @@ export class ProceduralWorld {
     let height = 2.4;
     let halfD = 0.9;
 
-    if (type === "BARRIER") {
-      const block = new THREE.Mesh(
-        new THREE.BoxGeometry(10.8, 2.3, 1.5),
-        this.matHazardSolid,
-      );
-      block.position.y = 1.15;
-      const stripe = new THREE.Mesh(
-        new THREE.BoxGeometry(11.0, 0.35, 1.6),
-        this.matBrutalRib,
-      );
-      stripe.position.y = 2.1;
-      group.add(block, stripe);
-    } else if (type === "LASER") {
-      const postL = new THREE.Mesh(
-        new THREE.BoxGeometry(0.6, 3.0, 0.6),
-        this.matBrutalRib,
-      );
-      postL.position.set(-5.2, 1.5, 0);
-      const postR = postL.clone();
-      postR.position.set(5.2, 1.5, 0);
+    if (!cached) {
+      if (type === "BARRIER") {
+        const block = new THREE.Mesh(
+          new THREE.BoxGeometry(10.8, 2.3, 1.5),
+          this.matHazardSolid,
+        );
+        block.position.y = 1.15;
+        const stripe = new THREE.Mesh(
+          new THREE.BoxGeometry(11.0, 0.35, 1.6),
+          this.matBrutalRib,
+        );
+        stripe.position.y = 2.1;
+        group.add(block, stripe);
+      } else if (type === "LASER") {
+        const postL = new THREE.Mesh(
+          new THREE.BoxGeometry(0.6, 3.0, 0.6),
+          this.matBrutalRib,
+        );
+        postL.position.set(-5.2, 1.5, 0);
+        const postR = postL.clone();
+        postR.position.set(5.2, 1.5, 0);
 
-      const beam1 = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.14, 0.14, 10.4, 8),
-        this.matLaserBeam,
-      );
-      beam1.rotation.z = Math.PI / 2;
-      beam1.position.y = 1.1;
-      const beam2 = beam1.clone();
-      beam2.position.y = 2.2;
+        const beam1 = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.14, 0.14, 10.4, 8),
+          this.matLaserBeam,
+        );
+        beam1.rotation.z = Math.PI / 2;
+        beam1.position.y = 1.1;
+        const beam2 = beam1.clone();
+        beam2.position.y = 2.2;
 
-      group.add(postL, postR, beam1, beam2);
-      height = 2.7;
-      halfD = 0.6;
-    } else if (type === "HAZARD_ZONE") {
-      const pad = new THREE.Mesh(
-        new THREE.BoxGeometry(11.2, 0.35, 7.5),
-        this.matHazardZone,
-      );
-      pad.position.y = 0.18;
-      group.add(pad);
-      height = 1.1;
-      halfD = 3.6;
-    } else if (type === "MOVING") {
-      const crusher = new THREE.Mesh(
-        new THREE.BoxGeometry(4.4, 2.6, 1.6),
-        this.matHazardSolid,
-      );
-      crusher.position.y = 1.3;
-      group.add(crusher);
-      halfW = 2.3;
-      height = 2.6;
+        group.add(postL, postR, beam1, beam2);
+        height = 2.7;
+        halfD = 0.6;
+      } else if (type === "HAZARD_ZONE") {
+        const pad = new THREE.Mesh(
+          new THREE.BoxGeometry(11.2, 0.35, 7.5),
+          this.matHazardZone,
+        );
+        pad.position.y = 0.18;
+        group.add(pad);
+        height = 1.1;
+        halfD = 3.6;
+      } else if (type === "MOVING") {
+        const crusher = new THREE.Mesh(
+          new THREE.BoxGeometry(4.4, 2.6, 1.6),
+          this.matHazardSolid,
+        );
+        crusher.position.y = 1.3;
+        group.add(crusher);
+        halfW = 2.3;
+        height = 2.6;
+      }
+
+      if (type !== "MOVING") {
+        const warning = new THREE.Mesh(
+          new THREE.BoxGeometry(10.6, 0.055, 0.065),
+          this.matLaserBeam,
+        );
+        warning.position.set(0, 0.45, 1);
+        group.add(warning);
+      }
     }
-
-    if (type !== "MOVING") {
-      const warning = new THREE.Mesh(
-        new THREE.BoxGeometry(10.6, 0.055, 0.065),
-        this.matLaserBeam,
-      );
-      warning.position.set(0, 0.45, 1);
-      group.add(warning);
-    }
+    ({ halfW, height, halfD } = {
+      BARRIER: { halfW: 5.4, height: 2.4, halfD: 0.9 },
+      LASER: { halfW: 5.4, height: 2.7, halfD: 0.6 },
+      HAZARD_ZONE: { halfW: 5.4, height: 1.1, halfD: 3.6 },
+      MOVING: { halfW: 2.3, height: 2.6, halfD: 0.9 },
+    }[type]);
     this.scene.add(group);
     this.obstacles.push({
       type,
@@ -402,20 +429,35 @@ export class ProceduralWorld {
     });
   }
 
-  spawnEnergyTrail(surfaceKey, startZ, count = 4, spacing = 4.2) {
+  spawnEnergyTrail(surfaceKey, startZ, count = 4, spacing = 4.2, value = 1) {
     const surf = SURFACES[surfaceKey];
     const orbGeo = this.orbGeometry;
+    this.matBonusCoin ??= new THREE.MeshStandardMaterial({
+      color: 0xe797ff,
+      emissive: 0xb14ee3,
+      emissiveIntensity: 0.6,
+      metalness: 0.25,
+      roughness: 0.2,
+    });
 
     for (let i = 0; i < count; i++) {
-      const mesh = new THREE.Group();
-      mesh.add(new THREE.Mesh(orbGeo, this.matEnergyOrb));
-      const mint = new THREE.Mesh(
-        new THREE.BoxGeometry(0.1, 0.52, 0.04),
-        this.matEnergyOrb,
-      );
-      mint.position.z = 0.085;
-      mint.rotation.z = -0.32;
-      mesh.add(mint);
+      const cached = this.coinPool.pop();
+      const mesh = cached || new THREE.Group();
+      if (!cached) {
+        mesh.add(new THREE.Mesh(orbGeo, this.matEnergyOrb));
+        const mint = new THREE.Mesh(
+          new THREE.BoxGeometry(0.1, 0.52, 0.04),
+          this.matEnergyOrb,
+        );
+        mint.position.z = 0.085;
+        mint.rotation.z = -0.32;
+        mesh.add(mint);
+      }
+      mesh.rotation.set(0, 0, 0);
+      mesh.scale.setScalar(value > 1 ? 1.2 : 1);
+      mesh.children.forEach((child) => {
+        child.material = value > 1 ? this.matBonusCoin : this.matEnergyOrb;
+      });
       const pos = new THREE.Vector3(
         surf.basePos.x + surf.normal.x * 1.05,
         surf.basePos.y + surf.normal.y * 1.05,
@@ -427,6 +469,7 @@ export class ProceduralWorld {
         mesh,
         surfaceKey,
         collected: false,
+        value,
       });
     }
   }
@@ -436,6 +479,17 @@ export class ProceduralWorld {
    * Guarantees at least 1 surface is always 100% open and places guiding energy orbs on a safe surface.
    */
   spawnNextPattern(distance) {
+    if (this.patternCounter % 4 === 3) {
+      this.spawnEnergyTrail(
+        this.lastSafeSurface || "FLOOR",
+        this.nextPatternZ + 12,
+        8,
+        7,
+      );
+      this.nextPatternZ -= 100;
+      this.patternCounter++;
+      return;
+    }
     const phrase =
       this.patternCounter < 3
         ? RUN_PHRASES[this.patternCounter]
@@ -463,6 +517,15 @@ export class ProceduralWorld {
         ob.safeSurface = safe;
       }
       this.spawnEnergyTrail(safe, z + 18, 4, 4);
+      if (predictedDistance > 120 && beat === 1)
+        this.spawnEnergyTrail(
+          candidates[beat % candidates.length],
+          z + 34,
+          3,
+          4,
+          3,
+        );
+      this.lastSafeSurface = safe;
     });
     this.patternCounter++;
     this.nextPatternZ -= spacing * 3 + 24;
@@ -530,7 +593,7 @@ export class ProceduralWorld {
       }
 
       if (obs.mesh.position.z > TUNNEL.DESPAWN_Z) {
-        this.releaseMesh(obs.mesh);
+        this.recycleObstacle(obs);
         this.obstacles.splice(i, 1);
       }
     }
@@ -543,7 +606,7 @@ export class ProceduralWorld {
       c.mesh.rotation.x += dt * 2.0;
 
       if (c.mesh.position.z > TUNNEL.DESPAWN_Z || c.collected) {
-        this.releaseMesh(c.mesh);
+        this.recycleCoin(c);
         this.collectibles.splice(i, 1);
       }
     }
@@ -566,7 +629,7 @@ export class ProceduralWorld {
         const dy = c.mesh.position.y - playerPos.y;
         if (dx * dx + dy * dy < 2.4) {
           c.collected = true;
-          onOrbPicked(c.mesh.position);
+          onOrbPicked(c.mesh.position, c.value || 1);
         }
       }
     }

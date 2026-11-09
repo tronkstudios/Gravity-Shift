@@ -44,6 +44,7 @@ export class Player {
 
   buildParticleSystem() {
     this.maxParticles = 60;
+    this.particleBudget = 60;
     this.particlesData = [];
     const geo = new THREE.BufferGeometry();
     const positions = new Float32Array(this.maxParticles * 3);
@@ -70,10 +71,15 @@ export class Player {
     }
   }
 
+  setParticleBudget(count) {
+    this.particleBudget = count;
+    this.particleSystem.geometry.setDrawRange(0, count);
+  }
+
   emitBurst(count = 20, colorHex = PALETTE.CYAN) {
     this.particleMat.color.setHex(colorHex);
     let spawned = 0;
-    for (let i = 0; i < this.maxParticles && spawned < count; i++) {
+    for (let i = 0; i < this.particleBudget && spawned < count; i++) {
       const p = this.particlesData[i];
       if (p.life <= 0) {
         p.pos.copy(this.root.position);
@@ -190,8 +196,11 @@ export class Player {
         gravitySys.transitionElapsed / gravitySys.transitionDuration,
       );
 
-    if (!this.isDead && Math.random() < 1 - Math.exp(-30 * dt)) {
-      for (let i = 0; i < this.maxParticles; i++) {
+    if (
+      !this.isDead &&
+      Math.random() < 1 - Math.exp((-30 * dt * this.particleBudget) / 60)
+    ) {
+      for (let i = 0; i < this.particleBudget; i++) {
         const p = this.particlesData[i];
         if (p.life <= 0) {
           p.pos.copy(this.root.position);

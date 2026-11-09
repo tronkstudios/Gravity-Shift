@@ -1,3 +1,11 @@
+import { AdaptiveQuality } from "../graphics/adaptive-quality.js";
+import { PracticeController } from "../game/practice-controller.js";
+import {
+  dailyDate,
+  dailySeed,
+  validChallengeDate,
+  recordDaily,
+} from "../game/daily-challenge.js";
 import { ZoneController } from "../graphics/zone-controller.js";
 import { judgePerfectShift } from "../game/shift-judge.js";
 import { SURFACES } from "../config/surfaces.js";
@@ -23,6 +31,9 @@ export class GravityShiftGame {
   } = {}) {
     this.rendererFactory = rendererFactory;
     this.state = "MENU";
+    this.runMode = "normal";
+    this.challengeDate = dailyDate();
+    this.practice = null;
     this.countdownRemaining = 0;
     this.fixedAccumulator = 0;
     this.scoreMgr = new ScoreManager();
@@ -46,6 +57,15 @@ export class GravityShiftGame {
     this.world.resetWorld();
     this.zoneController = new ZoneController(this.scene, this.world);
 
+    this.quality = new AdaptiveQuality(
+      this.renderer,
+      window.devicePixelRatio || 1,
+      (profile) => {
+        this.qualityLabel = profile.label;
+        this.player.setParticleBudget(profile.particles);
+        this.menuStage.player.setParticleBudget(profile.particles);
+      },
+    );
     this.applySavedSettings();
     this.input = new InputController(this);
     this.input.bind();
@@ -97,17 +117,16 @@ export class GravityShiftGame {
     this.audio.musicEnabled = !!s.music;
     this.audio.sfxEnabled = !!s.sfx;
 
-    const maxDpr =
-      s.graphics === "PERFORMANCE"
-        ? 1
-        : Math.min(window.devicePixelRatio || 1, 2);
-    this.renderer.setPixelRatio(maxDpr);
+    this.quality.setMode(s.graphics || "AUTO");
 
     const touchPad = document.getElementById("touch-controls");
     if (touchPad) {
       touchPad.classList.toggle("hidden", !s.touchpad);
     }
 
+    document
+      .getElementById("lateral-controls")
+      .classList.toggle("hidden", !s.touchpad);
     this.player.applySkin(this.scoreMgr.saveData.equippedSkin);
   }
 
@@ -122,14 +141,43 @@ export class GravityShiftGame {
     }
   }
 
-  startNewRun({ instant = false } = {}) {
+  startNewRun({
+    instant = false,
+    mode = "normal",
+    challengeDate = this.challengeDate,
+  } = {}) {
+    if (!["normal", "practice", "daily"].includes(mode))
+      throw new Error("Modo inválido");
+    if (mode === "daily" && !validChallengeDate(challengeDate))
+      throw new Error("Fecha de reto inválida");
+    this.runMode = mode;
+    this.scoreMgr.mode = mode;
+    this.practice = mode === "practice" ? new PracticeController() : null;
+    if (mode === "daily") this.challengeDate = challengeDate;
+    this.gravitySys.transitionDuration =
+      mode === "daily"
+        ? 0.24
+        : Math.max(
+            0.12,
+            Math.min(
+              0.35,
+              Number(this.scoreMgr.saveData.settings.transitionDuration) || 0.2,
+            ),
+          );
+    this.quality?.resetSamples();
     this.ui.clearTransientFeedback();
     this.runId = (this.runId || 0) + 1;
     this.lastDeath = null;
     this.lastShiftSequence = 0;
-    this.rng.setSeed(this.scoreMgr.saveData.settings.customSeed);
+    this.rng.setSeed(
+      mode === "daily"
+        ? dailySeed(this.challengeDate)
+        : mode === "practice"
+          ? "PRACTICE"
+          : this.scoreMgr.saveData.settings.customSeed,
+    );
     this.scoreMgr.resetRun();
-    this.currentSpeed = this.baseSpeed;
+    this.currentSpeed = mode === "practice" ? 14 : this.baseSpeed;
     this.gravitySys.setSurfaceImmediate("FLOOR");
     this.player.reset();
     this.cameraCtrl.reset(this.gravitySys);
@@ -137,7 +185,20 @@ export class GravityShiftGame {
     this.zoneController.update(100, 0);
     this.audio.setZone(this.zoneController.zone);
     this.world.notifySurfaceShift("FLOOR");
-
+    this.practice?.enter(this);
+    document.getElementById("practice-complete").classList.add("hidden");
+    document
+      .getElementById("practice-panel")
+      .classList.toggle("hidden", mode !== "practice");
+    this.ui.updatePractice();
+    document.getElementById("countdown-label").textContent =
+      "PREPARA EL CAMBIO";
+    document.getElementById("hud-mode").textContent =
+      mode === "practice"
+        ? "PRÁCTICA · SIN RECOMPENSAS"
+        : mode === "daily"
+          ? "RETO " + this.challengeDate
+          : "PARTIDA NORMAL";
     this.state = "COUNTDOWN";
     this.countdownRemaining = instant ? 0 : 3;
     this.fixedAccumulator = 0;
@@ -162,7 +223,12 @@ export class GravityShiftGame {
   }
 
   continueRun({ useEnergy = false } = {}) {
-    if (this.state !== "GAMEOVER" || this.scoreMgr.reviveUsed) return false;
+    if (
+      this.runMode !== "normal" ||
+      this.state !== "GAMEOVER" ||
+      this.scoreMgr.reviveUsed
+    )
+      return false;
     if (useEnergy && this.scoreMgr.saveData.totalEnergy < 50) return false;
     if (useEnergy) this.scoreMgr.saveData.totalEnergy -= 50;
     this.ui.clearTransientFeedback();
@@ -198,16 +264,41 @@ export class GravityShiftGame {
 
   resumeGame() {
     if (this.state !== "PAUSED") return;
-    this.state = "PLAYING";
-    document.getElementById("modal-pause").classList.add("hidden");
-    this.lastTime = performance.now();
+    this.state = "RESUMING";
+    this.countdownRemaining = 2;
     this.fixedAccumulator = 0;
-    this.audio.startMusic();
+    this.lastTime = performance.now();
+    this.quality?.resetSamples();
+    document.getElementById("countdown-label").textContent = "VUELVE AL RITMO";
+    document.getElementById("countdown-number").textContent = "2";
+    document.getElementById("modal-pause").classList.add("hidden");
+    document.getElementById("countdown").classList.remove("hidden");
+  }
+  cancelResume() {
+    if (this.state !== "RESUMING") return;
+    this.state = "PAUSED";
+    document.getElementById("countdown").classList.add("hidden");
+    document.getElementById("modal-pause").classList.remove("hidden");
+  }
+  loadSharedDaily() {
+    const href = window.location?.href;
+    if (!href) return;
+    const date = new URL(href).searchParams.get("daily");
+    if (validChallengeDate(date)) {
+      this.challengeDate = date;
+      this.linkChallenge = true;
+      this.ui.refreshAllUI();
+    }
   }
 
   returnToMainMenu() {
     this.ui.clearTransientFeedback();
     this.state = "MENU";
+    this.runMode = "normal";
+    this.scoreMgr.mode = "normal";
+    this.practice = null;
+    document.getElementById("practice-panel").classList.add("hidden");
+    document.getElementById("practice-complete").classList.add("hidden");
     document.getElementById("countdown").classList.add("hidden");
     document.getElementById("danger-cue").classList.add("hidden");
     this.scoreMgr.persist();
@@ -226,6 +317,11 @@ export class GravityShiftGame {
 
   handleGameOver() {
     if (this.state !== "PLAYING") return;
+    if (this.runMode === "practice") {
+      this.practice.fail(this);
+      this.ui.showToast("VUELVE A PROBAR · NO PIERDES PROGRESO");
+      return;
+    }
     document.getElementById("danger-cue").classList.add("hidden");
     this.ui.clearTransientFeedback();
     this.state = "GAMEOVER";
@@ -245,7 +341,9 @@ export class GravityShiftGame {
       `${this.scoreMgr.perfects} cambios perfectos · ${Math.floor(this.scoreMgr.elapsed)} s`;
     const adButton = document.getElementById("btn-reward-continue");
     adButton.hidden =
-      !this.adService.isProviderAvailable() || this.scoreMgr.reviveUsed;
+      this.runMode !== "normal" ||
+      !this.adService.isProviderAvailable() ||
+      this.scoreMgr.reviveUsed;
     adButton.disabled = false;
     this.player.isDead = true;
     this.audio.stopMusic();
@@ -255,7 +353,20 @@ export class GravityShiftGame {
       this.cameraCtrl.triggerShake(0.45, 0.65);
     this.ui.flashScreen("rgba(255, 101, 74, 0.42)");
 
-    const isNewRecord = this.scoreMgr.finalizeRun();
+    let isNewRecord = this.scoreMgr.finalizeRun();
+    if (this.runMode === "daily") {
+      isNewRecord = recordDaily(
+        this.scoreMgr.saveData.dailyRecords,
+        this.challengeDate,
+        this.scoreMgr.score,
+        this.scoreMgr.distance,
+      );
+      this.scoreMgr.persist();
+    }
+    document.getElementById("btn-share-result").hidden =
+      this.runMode !== "daily";
+    document.getElementById("go-best-label").textContent =
+      this.runMode === "daily" ? "RÉCORD LOCAL DEL RETO" : "MEJOR RÉCORD";
 
     document.getElementById("screen-hud").classList.add("hidden");
     document.getElementById("modal-gameover").classList.remove("hidden");
@@ -265,17 +376,27 @@ export class GravityShiftGame {
     ).toLocaleString();
     document.getElementById("go-distance").textContent =
       Math.floor(this.scoreMgr.distance) + " m";
+    document.getElementById("go-energy-label").textContent =
+      this.runMode === "daily"
+        ? "MONEDAS DEL RETO (NO SE AÑADEN AL SALDO)"
+        : "ENERGÍA OBTENIDA";
     document.getElementById("go-energy").textContent =
       "+" + this.scoreMgr.runEnergy;
-    document.getElementById("go-best").textContent =
-      this.scoreMgr.saveData.bestScore.toLocaleString();
+    document.getElementById("go-best").textContent = (
+      this.runMode === "daily"
+        ? this.scoreMgr.saveData.dailyRecords[this.challengeDate]?.score || 0
+        : this.scoreMgr.saveData.bestScore
+    ).toLocaleString();
 
     const recBadge = document.getElementById("go-new-record-badge");
     recBadge.classList.toggle("hidden", !isNewRecord);
 
     const reviveBtn = document.getElementById("btn-revive-shield");
     const canRevive =
-      this.scoreMgr.saveData.totalEnergy >= 50 && !this.scoreMgr.reviveUsed;
+      this.runMode === "normal" &&
+      this.scoreMgr.saveData.totalEnergy >= 50 &&
+      !this.scoreMgr.reviveUsed;
+    reviveBtn.disabled = !canRevive;
     reviveBtn.classList.toggle("opacity-40", !canRevive);
     reviveBtn.classList.toggle("cursor-not-allowed", !canRevive);
 
@@ -284,7 +405,10 @@ export class GravityShiftGame {
 
   animate(now) {
     requestAnimationFrame(this.animate);
-    const dt = Math.min(0.05, (now - this.lastTime) / 1000);
+    const frameSeconds = Math.max(0, (now - this.lastTime) / 1000);
+    if (this.state === "PLAYING" || this.state === "MENU")
+      this.quality?.update(frameSeconds);
+    const dt = Math.min(0.05, frameSeconds);
     this.lastTime = now;
 
     if (this.hangarStudio && this.hangarStudio.isActive) {
@@ -297,7 +421,7 @@ export class GravityShiftGame {
         this.menuStage.director.coins;
       document.getElementById("demo-dodges").textContent =
         this.menuStage.director.dodges;
-    } else if (this.state === "COUNTDOWN") {
+    } else if (this.state === "COUNTDOWN" || this.state === "RESUMING") {
       this.countdownRemaining -= dt;
       document.getElementById("countdown-number").textContent = Math.max(
         1,
@@ -307,7 +431,11 @@ export class GravityShiftGame {
         this.state = "PLAYING";
         document.getElementById("countdown").classList.add("hidden");
         this.audio.startMusic();
-        this.ui.showToast("SUBE AL TECHO · CORRE POR LAS PAREDES");
+        this.ui.showToast(
+          this.runMode === "practice"
+            ? this.practice.stage.hint
+            : "SUBE AL TECHO · CORRE POR LAS PAREDES",
+        );
       }
     } else if (this.state === "PLAYING") {
       this.fixedAccumulator += dt;
@@ -315,10 +443,13 @@ export class GravityShiftGame {
       while (this.fixedAccumulator >= step && this.state === "PLAYING") {
         let perfectShift = false;
         const hadMission = this.scoreMgr.missionCompleted;
-        this.currentSpeed = Math.min(
-          this.maxSpeed,
-          this.baseSpeed + this.scoreMgr.distance * 0.025,
-        );
+        this.currentSpeed =
+          this.runMode === "practice"
+            ? 14
+            : Math.min(
+                this.maxSpeed,
+                this.baseSpeed + this.scoreMgr.distance * 0.025,
+              );
         this.scoreMgr.updateFrame(step, this.currentSpeed);
         this.gravitySys.update(step);
         if (
@@ -342,9 +473,9 @@ export class GravityShiftGame {
         this.world.checkCollisions(
           this.player,
           this.gravitySys,
-          () => {
+          (_position, value = 1) => {
             const previous = this.scoreMgr.multiplier;
-            this.scoreMgr.collectOrb();
+            this.scoreMgr.collectOrb(value);
             this.audio.playEnergyPickup(this.scoreMgr.multiplier);
             this.player.emitBurst(10, 0xffca55);
             if (this.scoreMgr.multiplier > previous)
@@ -377,6 +508,18 @@ export class GravityShiftGame {
           this.ui.showToast("RETO COMPLETADO · +75 DE ENERGÍA");
         this.fixedAccumulator -= step;
       }
+      if (this.runMode === "practice" && this.state === "PLAYING") {
+        this.practice.update(dt, this);
+        this.ui.updatePractice();
+        if (this.practice.done) {
+          this.state = "PRACTICE_DONE";
+          this.ui.clearTransientFeedback();
+          this.audio.stopMusic();
+          document
+            .getElementById("practice-complete")
+            .classList.remove("hidden");
+        }
+      }
       this.cameraCtrl.update(
         dt,
         this.player,
@@ -384,7 +527,10 @@ export class GravityShiftGame {
         this.currentSpeed,
         false,
       );
-      const zone = this.zoneController?.update(dt, this.scoreMgr.distance);
+      const zone = this.zoneController?.update(
+        dt,
+        this.runMode === "practice" ? 0 : this.scoreMgr.distance,
+      );
       if (zone) {
         this.audio?.setZone(zone);
         document.getElementById("hud-zone").textContent = zone.name;
