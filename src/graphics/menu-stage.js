@@ -27,6 +27,7 @@ export class MenuStage {
     this.gravity = new GravitySystem();
     this.gravity.transitionDuration = 0.62;
     this.player = new Player(this.scene);
+    this.cameraController.reset(this.gravity);
     this.world = new ProceduralWorld(this.scene, new SeededRNG("MENU-STAGE"));
     this.world.resetWorld();
     this.demoDistance = 0;
@@ -48,6 +49,7 @@ export class MenuStage {
       if (this.respawn > 0.9) {
         this.player.reset();
         this.gravity.setSurfaceImmediate("FLOOR");
+        this.cameraController.reset(this.gravity);
         this.world.resetWorld();
         this.demoDistance = 0;
         this.director.crashed = false;

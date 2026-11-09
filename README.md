@@ -57,8 +57,14 @@ La URL local es `http://localhost:4173`. Reconstruye y recarga después de edita
 
 Los módulos de `src/` y `styles.css` son la fuente de verdad. `index.html`, `game.js` y `dist/` se generan y se excluyen de Git. Three.js 0.128.0 y Tailwind se incluyen en la compilación; fuentes e iconos se descargan desde sus CDN. [Arquitectura y dependencias](docs/architecture.md).
 
+## Estabilidad visual
+
+Las recompensas de cambio perfecto se confirman después de resolver colisiones. Morir, pausar, volver al menú o reiniciar limpia sus mensajes, destellos y sonidos pendientes. La cámara usa la orientación actual del personaje, reinicia su pose al reintentar e interpola el giro sin pasar por un vector vertical nulo. Las sacudidas son suaves y amortiguadas.
+
+El escudo inactivo no dibuja ni escribe profundidad. Las partículas no escriben profundidad y actualizan su visibilidad sin depender de límites geométricos obsoletos. Los materiales transparentes de los personajes no ocultan estos efectos. El cuerpo deja de deslizarse al terminar la animación de derrota.
+
 ## Verificación y límites
 
-25 pruebas cubren guardado, economía, colisiones a 20 FPS, rutas seguras, cambios perfectos, sectores, hazañas, animaciones, recompensas publicitarias, reintento, continuación y límites de módulos. Los tests de aplicación usan un renderer de prueba: no sustituyen una revisión visual WebGL en navegador ni en dispositivos.
+29 pruebas cubren guardado, economía, colisiones a 20 FPS, rutas seguras, cambios perfectos, sectores, hazañas, animaciones, recompensas publicitarias, reintento, continuación y límites de módulos. Los tests de aplicación usan un renderer de prueba: no sustituyen una revisión visual WebGL en navegador ni en dispositivos.
 
 El progreso solo se guarda en localStorage, conservando `GRAVITY_SHIFT_SAVE_V2`. No hay backend, transferencia automática entre dominios ni clasificaciones remotas. La entrega es web; no contiene binarios firmados ni publicaciones en App Store o Google Play.

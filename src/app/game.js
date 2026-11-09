@@ -123,6 +123,7 @@ export class GravityShiftGame {
   }
 
   startNewRun({ instant = false } = {}) {
+    this.ui.clearTransientFeedback();
     this.runId = (this.runId || 0) + 1;
     this.lastDeath = null;
     this.lastShiftSequence = 0;
@@ -131,6 +132,7 @@ export class GravityShiftGame {
     this.currentSpeed = this.baseSpeed;
     this.gravitySys.setSurfaceImmediate("FLOOR");
     this.player.reset();
+    this.cameraCtrl.reset(this.gravitySys);
     this.world.resetWorld();
     this.zoneController.update(100, 0);
     this.audio.setZone(this.zoneController.zone);
@@ -163,6 +165,7 @@ export class GravityShiftGame {
     if (this.state !== "GAMEOVER" || this.scoreMgr.reviveUsed) return false;
     if (useEnergy && this.scoreMgr.saveData.totalEnergy < 50) return false;
     if (useEnergy) this.scoreMgr.saveData.totalEnergy -= 50;
+    this.ui.clearTransientFeedback();
     this.scoreMgr.reviveUsed = true;
     this.scoreMgr.persist();
     this.player.reset();
@@ -186,6 +189,7 @@ export class GravityShiftGame {
 
   pauseGame() {
     if (this.state !== "PLAYING") return;
+    this.ui.clearTransientFeedback();
     this.state = "PAUSED";
     document.getElementById("danger-cue").classList.add("hidden");
     this.audio.stopMusic();
@@ -202,6 +206,7 @@ export class GravityShiftGame {
   }
 
   returnToMainMenu() {
+    this.ui.clearTransientFeedback();
     this.state = "MENU";
     document.getElementById("countdown").classList.add("hidden");
     document.getElementById("danger-cue").classList.add("hidden");
@@ -222,6 +227,7 @@ export class GravityShiftGame {
   handleGameOver() {
     if (this.state !== "PLAYING") return;
     document.getElementById("danger-cue").classList.add("hidden");
+    this.ui.clearTransientFeedback();
     this.state = "GAMEOVER";
     const obstacleName = {
       LASER: "un láser",
@@ -307,6 +313,7 @@ export class GravityShiftGame {
       this.fixedAccumulator += dt;
       const step = 1 / 120;
       while (this.fixedAccumulator >= step && this.state === "PLAYING") {
+        let perfectShift = false;
         const hadMission = this.scoreMgr.missionCompleted;
         this.currentSpeed = Math.min(
           this.maxSpeed,
@@ -327,16 +334,7 @@ export class GravityShiftGame {
               this.currentSpeed,
             )
           ) {
-            this.scoreMgr.awardPerfect();
-            this.audio.playPerfect();
-            this.player.emitBurst(20, 0xffd16c);
-            this.ui.showToast(
-              "CAMBIO PERFECTO · ×" + this.scoreMgr.multiplier.toFixed(1),
-            );
-            document
-              .getElementById("perfect-feedback")
-              .classList.remove("hidden");
-            this.perfectUntil = now + 650;
+            perfectShift = true;
           }
         }
         this.player.update(step, this.currentSpeed, this.gravitySys, false);
@@ -359,7 +357,23 @@ export class GravityShiftGame {
             this.handleGameOver();
           },
         );
-        if (!hadMission && this.scoreMgr.missionCompleted)
+        if (perfectShift && this.state === "PLAYING") {
+          this.scoreMgr.awardPerfect();
+          this.audio.playPerfect();
+          this.player.emitBurst(20, 0xffd16c);
+          this.ui.showToast(
+            "CAMBIO PERFECTO · ×" + this.scoreMgr.multiplier.toFixed(1),
+          );
+          document
+            .getElementById("perfect-feedback")
+            .classList.remove("hidden");
+          this.perfectUntil = now + 650;
+        }
+        if (
+          this.state === "PLAYING" &&
+          !hadMission &&
+          this.scoreMgr.missionCompleted
+        )
           this.ui.showToast("RETO COMPLETADO · +75 DE ENERGÍA");
         this.fixedAccumulator -= step;
       }
@@ -375,10 +389,11 @@ export class GravityShiftGame {
         this.audio?.setZone(zone);
         document.getElementById("hud-zone").textContent = zone.name;
       }
-      if (this.zoneController?.changed) this.ui.showToast(zone.name);
+      if (this.state === "PLAYING" && this.zoneController?.changed)
+        this.ui.showToast(zone.name);
       if (now > (this.perfectUntil || 0))
         document.getElementById("perfect-feedback").classList.add("hidden");
-      while (this.scoreMgr.newUnlocks.length) {
+      while (this.state === "PLAYING" && this.scoreMgr.newUnlocks.length) {
         const skin = this.scoreMgr.newUnlocks.shift();
         this.ui.showToast("PERSONAJE DESBLOQUEADO · " + skin.toUpperCase());
       }

@@ -15,14 +15,33 @@ test.before(async () => {
 });
 function runtime(saved) {
   const nodes = new Map();
-  const node = () => ({
-    textContent: "",
-    style: {},
-    classList: { add() {}, remove() {}, toggle() {} },
-    setAttribute() {},
-    addEventListener() {},
-    appendChild() {},
-  });
+  const node = () => {
+    const classes = new Set();
+    return {
+      textContent: "",
+      style: {},
+      classList: {
+        add(...names) {
+          names.forEach((name) => classes.add(name));
+        },
+        remove(...names) {
+          names.forEach((name) => classes.delete(name));
+        },
+        contains(name) {
+          return classes.has(name);
+        },
+        toggle(name, force) {
+          const enabled = force === undefined ? !classes.has(name) : force;
+          if (enabled) classes.add(name);
+          else classes.delete(name);
+          return enabled;
+        },
+      },
+      setAttribute() {},
+      addEventListener() {},
+      appendChild() {},
+    };
+  };
   const storage = {
     value: saved,
     getItem() {
@@ -52,7 +71,7 @@ function runtime(saved) {
     querySelectorAll: () => [],
   };
   globalThis.requestAnimationFrame = () => {};
-  return { ...classes, storage };
+  return { ...classes, storage, nodes };
 }
 test("corrupt saves and locked equipped skins normalize without losing legitimate balances", () => {
   const { ScoreManager } = runtime(
@@ -627,4 +646,125 @@ test("H5 rewarded continuation waits for the completed placement before resuming
   assert.equal(service.busy, false);
   placement.adBreakDone({ breakStatus: "viewed" });
   assert.equal(rewards, 1);
+});
+function visualGame() {
+  const env = runtime();
+  const game = new env.GravityShiftGame({
+    rendererFactory: () => ({
+      domElement: { addEventListener() {} },
+      setSize() {},
+      setPixelRatio() {},
+      render() {},
+    }),
+    hangarFactory: () => ({ isActive: false }),
+  });
+  game.startNewRun({ instant: true });
+  game.world.collectibles = [];
+  game.world.nextPatternZ = -1000;
+  const threat = new env.THREE.Group();
+  threat.position.z = -12;
+  game.world.obstacles = [
+    {
+      type: "LASER",
+      surfaceKey: "FLOOR",
+      mesh: threat,
+      halfD: 0.6,
+      halfW: 5.4,
+      localX: 0,
+    },
+  ];
+  return { ...env, game };
+}
+test("perfect shift and lethal collision in the same simulation step shows defeat only", () => {
+  const { game, THREE, nodes } = visualGame();
+  const rotor = new THREE.Group();
+  rotor.rotation.z = Math.PI / 2;
+  game.world.obstacles.push({
+    type: "ROTATING",
+    surfaceKey: "ALL",
+    mesh: rotor,
+    rotSpeed: 0,
+    halfD: 0.9,
+  });
+  game.gravitySys.shiftTo("LEFT");
+  game.animate(game.lastTime + 10);
+  assert.equal(game.state, "GAMEOVER");
+  assert.equal(game.scoreMgr.perfects, 0);
+  assert.equal(
+    nodes.get("perfect-feedback").classList.contains("hidden"),
+    true,
+  );
+  assert.equal(nodes.get("toast-msg").textContent, "");
+  assert.equal(game.perfectUntil, 0);
+  assert.equal(nodes.get("modal-gameover").classList.contains("hidden"), false);
+});
+test("death and retry clear an already visible perfect banner, toast and flash", () => {
+  const { game, nodes } = visualGame();
+  game.gravitySys.shiftTo("LEFT");
+  game.animate(game.lastTime + 10);
+  assert.equal(game.scoreMgr.perfects, 1);
+  assert.equal(
+    nodes.get("perfect-feedback").classList.contains("hidden"),
+    false,
+  );
+  game.handleGameOver();
+  assert.equal(
+    nodes.get("perfect-feedback").classList.contains("hidden"),
+    true,
+  );
+  assert.equal(nodes.get("toast-msg").classList.contains("opacity-0"), true);
+  assert.equal(nodes.get("toast-msg").textContent, "");
+  assert.equal(game.audio.perfectTimeout, null);
+  game.startNewRun({ instant: true });
+  assert.equal(game.perfectUntil, 0);
+  assert.equal(nodes.get("screen-flash").style.opacity, "0");
+  assert.equal(
+    nodes.get("perfect-feedback").classList.contains("hidden"),
+    true,
+  );
+});
+test("camera follows the current gravity pose and stays stable through opposite-wall turns", async () => {
+  const { CameraController } =
+    await import("../src/graphics/camera-controller.js");
+  const { GravitySystem, THREE } = runtime();
+  const gravity = new GravitySystem(),
+    camera = new THREE.PerspectiveCamera(),
+    controller = new CameraController(camera);
+  controller.reset(gravity);
+  const start = camera.position.clone();
+  gravity.shiftTo("CEILING");
+  controller.update(1 / 120, {}, gravity, 30);
+  assert.ok(
+    camera.position.distanceTo(start) < 1e-8,
+    "must not dive before body takeoff",
+  );
+  let previous = camera.quaternion.clone();
+  for (let i = 0; i < 90; i++) {
+    gravity.update(1 / 120);
+    controller.update(1 / 120, {}, gravity, 30);
+    assert.ok(
+      previous.angleTo(camera.quaternion) < 0.6,
+      "no sudden camera flip",
+    );
+    assert.ok(Math.abs(controller.currentUp.length() - 1) < 1e-8);
+    previous.copy(camera.quaternion);
+  }
+  gravity.setSurfaceImmediate("FLOOR");
+  controller.reset(gravity);
+  assert.ok(camera.position.distanceTo(start) < 1e-8);
+});
+test("invisible shields cannot occlude particles and expired shields disappear immediately", async () => {
+  const { Player } = await import("../src/game/player.js");
+  const { THREE, GravitySystem } = runtime();
+  const player = new Player(new THREE.Scene()),
+    gravity = new GravitySystem();
+  player.update(0.01, 30, gravity);
+  assert.equal(player.shieldMesh.visible, false);
+  assert.equal(player.shieldMat.depthWrite, false);
+  assert.equal(player.particleMat.depthWrite, false);
+  assert.equal(player.particleSystem.frustumCulled, false);
+  player.shieldTimer = 0.005;
+  player.update(0.01, 30, gravity);
+  assert.equal(player.shieldMesh.visible, false);
+  assert.equal(player.shieldTimer, 0);
 });

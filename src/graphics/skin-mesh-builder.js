@@ -35,6 +35,7 @@ export class SkinMeshBuilder {
       metalness: skinConfig.metalness,
       roughness: skinConfig.roughness,
       transparent: !!skinConfig.transparent,
+      depthWrite: !skinConfig.transparent,
       opacity: skinConfig.opacity || 1.0,
     });
     const matSecondary = new THREE.MeshStandardMaterial({
@@ -42,6 +43,7 @@ export class SkinMeshBuilder {
       metalness: Math.min(0.95, skinConfig.metalness + 0.1),
       roughness: Math.max(0.1, skinConfig.roughness),
       transparent: !!skinConfig.transparent,
+      depthWrite: !skinConfig.transparent,
       opacity: skinConfig.opacity
         ? Math.min(1, skinConfig.opacity + 0.15)
         : 1.0,

@@ -51,9 +51,17 @@ export class AudioManager {
   setZone(zone) {
     this.zone = zone;
   }
+  cancelFeedback() {
+    clearTimeout(this.perfectTimeout);
+    this.perfectTimeout = null;
+  }
   playPerfect() {
+    this.cancelFeedback();
     this.playTone(880, "sine", 0.12, 0.1, 1320);
-    setTimeout(() => this.playTone(1320, "sine", 0.18, 0.08, 1760), 70);
+    this.perfectTimeout = setTimeout(
+      () => this.playTone(1320, "sine", 0.18, 0.08, 1760),
+      70,
+    );
   }
 
   playUIClick() {

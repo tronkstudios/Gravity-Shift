@@ -95,12 +95,25 @@ export class GameUI {
     }
   }
 
+  clearTransientFeedback() {
+    this.game.audio?.cancelFeedback?.();
+    clearTimeout(this.toastTimeout);
+    clearTimeout(this.flashTimeout);
+    document.getElementById("perfect-feedback").classList.add("hidden");
+    const toast = document.getElementById("toast-msg");
+    toast.classList.add("opacity-0", "translate-y-4");
+    toast.textContent = "";
+    document.getElementById("screen-flash").style.opacity = "0";
+    this.game.perfectUntil = 0;
+  }
+
   flashScreen(colorCss) {
     const el = document.getElementById("screen-flash");
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    clearTimeout(this.flashTimeout);
     el.style.backgroundColor = colorCss;
     el.style.opacity = "1";
-    setTimeout(() => {
+    this.flashTimeout = setTimeout(() => {
       el.style.opacity = "0";
     }, 140);
   }

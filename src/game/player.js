@@ -29,6 +29,7 @@ export class Player {
       wireframe: true,
       transparent: true,
       opacity: 0.0,
+      depthWrite: false,
     });
     this.shieldMesh = new THREE.Mesh(shieldGeo, this.shieldMat);
     this.shieldMesh.position.y = 1.0;
@@ -55,7 +56,9 @@ export class Player {
       opacity: 0.85,
     });
 
+    this.particleMat.depthWrite = false;
     this.particleSystem = new THREE.Points(geo, this.particleMat);
+    this.particleSystem.frustumCulled = false;
     this.scene.add(this.particleSystem);
 
     for (let i = 0; i < this.maxParticles; i++) {
@@ -110,8 +113,9 @@ export class Player {
   }
 
   update(dt, speed, gravitySys, isMenuShowcase = false) {
+    this.shieldTimer = Math.max(0, this.shieldTimer - dt);
+    this.shieldMesh.visible = this.shieldTimer > 0;
     if (this.shieldTimer > 0) {
-      this.shieldTimer -= dt;
       this.shieldMesh.rotation.y += dt * 4;
       this.shieldMesh.rotation.x += dt * 2;
       this.shieldMat.opacity = 0.35 + Math.sin(this.shieldTimer * 18) * 0.2;
@@ -149,7 +153,11 @@ export class Player {
         -0.18,
         settle,
       );
-      this.visualGroup.position.z += dt * 0.35;
+      this.visualGroup.position.z = THREE.MathUtils.lerp(
+        this.visualGroup.position.z,
+        0.25,
+        settle,
+      );
     } else {
       // World travel supplies the jump arc: do not add a second floating bounce.
       const follow = 1 - Math.exp(-dt * 20);
