@@ -146,73 +146,29 @@ export class Player {
       this.visualGroup.rotation.x += dt * 7.5;
       this.visualGroup.rotation.y += dt * 5.0;
       this.visualGroup.position.z += dt * 6.0;
-    } else if (gravitySys.isTransitioning) {
-      const progress = Math.min(
-        1,
-        gravitySys.transitionElapsed / gravitySys.transitionDuration,
-      );
-      const arc = Math.sin(progress * Math.PI);
-      const anticipation =
-        Math.sin(Math.min(1, progress / 0.22) * Math.PI) *
-        Math.max(0, 1 - progress / 0.3);
-      this.torso.position.y = 1.04 - anticipation * 0.12;
-      const blend = 1 - Math.exp(-dt * 18);
+    } else {
+      // World travel supplies the jump arc: do not add a second floating bounce.
+      const follow = 1 - Math.exp(-dt * 20);
+      const airborne = gravitySys.isTransitioning;
+      const progress = airborne
+        ? Math.min(
+            1,
+            gravitySys.transitionElapsed / gravitySys.transitionDuration,
+          )
+        : 0;
       this.visualGroup.position.y = THREE.MathUtils.lerp(
         this.visualGroup.position.y,
-        0.2 + arc * 0.7,
-        blend,
+        airborne ? Math.sin(progress * Math.PI) ** 2 * 0.035 : 0,
+        follow,
       );
-      this.visualGroup.rotation.x = THREE.MathUtils.lerp(
-        this.visualGroup.rotation.x,
-        -0.22 - arc * 0.45,
-        blend,
-      );
-      this.visualGroup.rotation.z = Math.sin(progress * Math.PI * 2) * 0.18;
-      this.torso.rotation.x = -0.3;
-      this.head.rotation.x = 0.1;
-      this.leftArm.rotation.x = 0.35 + arc * 0.85;
-      this.rightArm.rotation.x = -0.35 - arc * 0.6;
-      this.leftArm.rotation.z = arc * 0.35;
-      this.rightArm.rotation.z = -arc * 0.35;
-      this.leftLeg.rotation.x = -0.2 - arc * 0.85 + anticipation * 0.3;
-      this.rightLeg.rotation.x = 0.2 + arc * 0.65;
-    } else {
-      const blend = 1 - Math.exp(-dt * 16);
-      this.visualGroup.rotation.x *= 1 - blend;
-      this.visualGroup.rotation.z *= 1 - blend;
-      this.visualGroup.rotation.y = THREE.MathUtils.lerp(
-        this.visualGroup.rotation.y,
-        isMenuShowcase ? 0.2 : 0,
-        blend,
-      );
-      this.visualGroup.position.y *= 1 - blend;
-      const cadence = Math.min(21, 9 + speed * 0.2);
-      this.runCycleTime += dt * cadence;
-      const swing = Math.sin(this.runCycleTime);
-      const bob = Math.cos(this.runCycleTime * 2) * 0.065;
-      this.torso.position.y = 1.08 + bob;
-      this.torso.rotation.x = -0.2 + Math.cos(this.runCycleTime * 2) * 0.045;
-      this.torso.rotation.y = swing * 0.11;
-      this.torso.rotation.z = swing * 0.045;
-      this.head.rotation.x = 0.1 - Math.cos(this.runCycleTime * 2) * 0.025;
-      this.head.rotation.y = -swing * 0.07;
-      this.leftArm.rotation.x = swing * 0.8;
-      this.rightArm.rotation.x = -swing * 0.8;
-      this.leftArm.rotation.z = 0.08;
-      this.rightArm.rotation.z = -0.08;
-      this.leftLeg.rotation.x = -swing * 0.95;
-      this.rightLeg.rotation.x = swing * 0.95;
+      this.visualGroup.rotation.x *= 1 - follow;
+      this.visualGroup.rotation.y *= 1 - follow;
+      this.visualGroup.rotation.z *= 1 - follow;
+      if (!airborne)
+        this.runCycleTime +=
+          dt * Math.PI * 2 * Math.min(2.15, 1.35 + speed * 0.018);
     }
 
-    if (!this.isDead) {
-      const follow = 1 - Math.exp(-dt * 24);
-      this.poseNodes.forEach((node, index) => {
-        const old = this.previousPose[index];
-        node.rotation.x = THREE.MathUtils.lerp(old.x, node.rotation.x, follow);
-        node.rotation.y = THREE.MathUtils.lerp(old.y, node.rotation.y, follow);
-        node.rotation.z = THREE.MathUtils.lerp(old.z, node.rotation.z, follow);
-      });
-    }
     if (!this.isDead)
       this.rigAnimator.update(
         this.currentRig,

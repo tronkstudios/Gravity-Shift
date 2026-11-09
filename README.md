@@ -37,7 +37,7 @@ docs/                Decisiones y límites de arquitectura
 
 ## Verificación
 
-Dieciséis pruebas cubren guardado, recompensa única, colisiones con fotogramas de 50 ms, liberación de geometrías, tiempo de simulación, controles, pausa, composición de la aplicación y ausencia de ciclos entre módulos. La prueba de composición sustituye el renderer: no certifica el resultado visual de WebGL. Falta una revisión visual en navegador y en dispositivos.
+Diecisiete pruebas cubren guardado, recompensa única, colisiones con fotogramas de 50 ms, liberación de geometrías, tiempo de simulación, controles, pausa, composición de la aplicación y ausencia de ciclos entre módulos. La prueba de composición sustituye el renderer: no certifica el resultado visual de WebGL. Falta una revisión visual en navegador y en dispositivos.
 
 ## Datos, anuncios y móvil
 
@@ -56,3 +56,5 @@ El menú usa ahora `src/graphics/menu-stage.js`: un diorama 3D separado, con tú
 Los chasis incluyen ahora pivotes reales de codos, rodillas y tobillos, manos y pies. `RigAnimator` anima las articulaciones con flexión de recuperación, contrabalanceo de brazos y compresión de aterrizaje. Las monedas doradas conservan la economía original de energía. El piloto del menú recoge monedas, evita obstáculos y reinicia su partida al chocar; sus contadores son independientes del guardado del jugador.
 
 Las direcciones rápidas se almacenan durante el cambio de superficie, con interpolación quintica y llegada sin salto. Los chasis incorporan cinco familias de siluetas (pesada, sigilo, carreras, celestial y técnica), armadura de hombros y rodillas, paneles pectorales y detalles animados. El piloto prioriza las cadenas de monedas con histéresis para evitar cambios de ruta innecesarios.
+
+La carrera usa ahora una trayectoria de pie con apoyo y recuperación, resuelta mediante cinemática inversa de dos segmentos. Se corrigió el sentido de flexión de rodillas y codos y se redujeron el giro del tronco, la oscilación vertical y el rebote añadido durante los cambios de gravedad. No utiliza captura de movimiento.

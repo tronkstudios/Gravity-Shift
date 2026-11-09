@@ -83,7 +83,7 @@ export class GravitySystem {
 
       // Interpolate 2D cross-section position with a slight inward arc toward tunnel center (0,0)
       this.currentPos2D.lerpVectors(this.startPos2D, this.targetPos2D, easeT);
-      const midArc = Math.sin(rawT * Math.PI) * 0.28;
+      const midArc = Math.sin(easeT * Math.PI) ** 2 * 0.1;
       this.currentPos2D.multiplyScalar(1.0 - midArc);
 
       // Slerp 3D Quaternion orientation smoothly

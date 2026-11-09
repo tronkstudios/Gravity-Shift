@@ -366,8 +366,8 @@ test("all 16 skins have movable elbow, knee and ankle chains", async () => {
     assert.equal(rig.joints.leftAnkle.parent, rig.joints.leftKnee);
     const animator = new RigAnimator();
     animator.update(rig, 0.1, Math.PI / 2, false);
-    assert.ok(rig.joints.leftKnee.rotation.x > 0);
-    assert.ok(rig.joints.leftElbow.rotation.x < 0);
+    assert.ok(rig.joints.leftKnee.rotation.x < 0);
+    assert.ok(rig.joints.leftElbow.rotation.x > 0);
     animator.update(rig, 0.1, 0, true, 0.5);
     animator.update(rig, 0.05, 0, false);
     assert.ok(animator.landing > 0);
@@ -412,4 +412,21 @@ test("all character designs have articulated geometry and distinct silhouette fa
     SkinMeshBuilder.disposeRig(rig);
   }
   assert.equal(families.size, 5);
+});
+test("human gait plants the stance foot and bends knees only anatomically", async () => {
+  const { sampleFoot, solveLeg } =
+    await import("../src/graphics/rig-animator.js");
+  for (let i = 0; i < 100; i++) {
+    const foot = sampleFoot(i / 100);
+    const pose = solveLeg(foot.z, 0.66 - foot.lift);
+    assert.ok(pose.knee <= 0 && pose.knee >= -Math.PI);
+    if (foot.contact) assert.equal(foot.lift, 0);
+    const y =
+      -0.36 * Math.cos(pose.hip) - 0.36 * Math.cos(pose.hip + pose.knee);
+    const z =
+      -0.36 * Math.sin(pose.hip) - 0.36 * Math.sin(pose.hip + pose.knee);
+    assert.ok(Math.abs(y - (-0.66 + foot.lift)) < 0.002);
+    assert.ok(Math.abs(z - foot.z) < 0.002);
+    assert.ok(Math.abs(pose.hip + pose.knee + pose.ankle) < 0.00001);
+  }
 });
