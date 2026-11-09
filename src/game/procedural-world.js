@@ -26,7 +26,9 @@ export class ProceduralWorld {
   }
 
   initSharedMaterials() {
-    this.orbGeometry = new THREE.OctahedronGeometry(0.48, 0);
+    this.orbGeometry = new THREE.CylinderGeometry(0.48, 0.48, 0.12, 24).rotateX(
+      Math.PI / 2,
+    );
     this.matFloorDeck = new THREE.MeshStandardMaterial({
       color: 0x1e2d3d,
       metalness: 0.72,
@@ -92,9 +94,9 @@ export class ProceduralWorld {
       opacity: 0.75,
     });
     this.matEnergyOrb = new THREE.MeshStandardMaterial({
-      color: PALETTE.CYAN,
-      emissive: PALETTE.CYAN,
-      emissiveIntensity: 0.75,
+      color: 0xffca55,
+      emissive: 0xffa320,
+      emissiveIntensity: 0.45,
       metalness: 0.2,
       roughness: 0.1,
     });
@@ -396,7 +398,15 @@ export class ProceduralWorld {
     const orbGeo = this.orbGeometry;
 
     for (let i = 0; i < count; i++) {
-      const mesh = new THREE.Mesh(orbGeo, this.matEnergyOrb);
+      const mesh = new THREE.Group();
+      mesh.add(new THREE.Mesh(orbGeo, this.matEnergyOrb));
+      const mint = new THREE.Mesh(
+        new THREE.BoxGeometry(0.1, 0.52, 0.04),
+        this.matEnergyOrb,
+      );
+      mint.position.z = 0.085;
+      mint.rotation.z = -0.32;
+      mesh.add(mint);
       const pos = new THREE.Vector3(
         surf.basePos.x + surf.normal.x * 1.05,
         surf.basePos.y + surf.normal.y * 1.05,

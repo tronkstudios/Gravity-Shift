@@ -32,7 +32,8 @@ export class MenuStage {
     this.world.speedDust.visible = false;
     this.world.resetWorld();
     this.director = new MenuDirector();
-    this.director.speed = 15;
+    this.director.speed = 22;
+    this.respawn = 0;
     const metal = new THREE.MeshStandardMaterial({
       color: 0x26364d,
       metalness: 0.65,
@@ -73,6 +74,19 @@ export class MenuStage {
     if (skin !== this.skin) {
       this.skin = skin;
       this.player.applySkin(skin);
+    }
+    if (this.director.crashed) {
+      this.player.isDead = true;
+      this.respawn += dt;
+      this.player.update(dt, 0, this.gravity, true);
+      if (this.respawn > 0.9) {
+        this.player.reset();
+        this.gravity.setSurfaceImmediate("FLOOR");
+        this.world.resetWorld();
+        this.director.crashed = false;
+        this.respawn = 0;
+      }
+      return;
     }
     this.director.update(dt, this.world, this.gravity, this.player);
     this.gravity.update(dt);

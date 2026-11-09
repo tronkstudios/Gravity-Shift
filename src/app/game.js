@@ -1,5 +1,4 @@
 import { MenuStage } from "../graphics/menu-stage.js";
-import { MenuDirector } from "../game/menu-director.js";
 import * as THREE from "three";
 import { PALETTE } from "../config/palette.js";
 import { RewardedAdService } from "../services/rewarded-ads.js";
@@ -40,7 +39,6 @@ export class GravityShiftGame {
     this.player = new Player(this.scene);
     this.cameraCtrl = new CameraController(this.camera);
     this.world = new ProceduralWorld(this.scene, this.rng);
-    this.menuDirector = new MenuDirector();
     this.menuStage = new MenuStage();
     this.world.resetWorld();
 
@@ -232,6 +230,10 @@ export class GravityShiftGame {
 
     if (this.state === "MENU") {
       this.menuStage.update(dt, this.scoreMgr.saveData.equippedSkin);
+      document.getElementById("demo-coins").textContent =
+        this.menuStage.director.coins;
+      document.getElementById("demo-dodges").textContent =
+        this.menuStage.director.dodges;
     } else if (this.state === "COUNTDOWN") {
       this.countdownRemaining -= dt;
       document.getElementById("countdown-number").textContent = Math.max(
@@ -264,7 +266,7 @@ export class GravityShiftGame {
             const previous = this.scoreMgr.multiplier;
             this.scoreMgr.collectOrb();
             this.audio.playEnergyPickup(this.scoreMgr.multiplier);
-            this.player.emitBurst(10, PALETTE.CYAN);
+            this.player.emitBurst(10, 0xffca55);
             if (this.scoreMgr.multiplier > previous)
               this.ui.showToast(
                 "COMBO ×" + this.scoreMgr.multiplier.toFixed(1),

@@ -81,12 +81,7 @@ export class GravitySystem {
       this.currentPos2D.multiplyScalar(1.0 - midArc);
 
       // Slerp 3D Quaternion orientation smoothly
-      THREE.Quaternion.slerp(
-        this.startQuat,
-        this.targetQuat,
-        this.currentQuat,
-        easeT,
-      );
+      this.currentQuat.slerpQuaternions(this.startQuat, this.targetQuat, easeT);
 
       // Shortest-angle interpolation for camera roll
       let diff = this.targetSurface.rollAngle - this.currentSurface.rollAngle;

@@ -1,3 +1,4 @@
+import { RigAnimator } from "../graphics/rig-animator.js";
 import * as THREE from "three";
 import { PALETTE } from "../config/palette.js";
 import { SKINS_CATALOG } from "../data/skins.js";
@@ -12,6 +13,7 @@ export class Player {
     this.scene.add(this.root);
 
     this.runCycleTime = 0;
+    this.rigAnimator = new RigAnimator();
     this.isDead = false;
     this.shieldTimer = 0;
     this.currentRig = null;
@@ -185,6 +187,15 @@ export class Player {
       this.leftLeg.rotation.x = -swing * 0.95;
       this.rightLeg.rotation.x = swing * 0.95;
     }
+
+    if (!this.isDead)
+      this.rigAnimator.update(
+        this.currentRig,
+        dt,
+        this.runCycleTime,
+        gravitySys.isTransitioning,
+        gravitySys.transitionElapsed / gravitySys.transitionDuration,
+      );
 
     if (!this.isDead && Math.random() < 1 - Math.exp(-30 * dt)) {
       for (let i = 0; i < this.maxParticles; i++) {

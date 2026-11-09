@@ -316,16 +316,69 @@ test("menu autopilot avoids an approaching surface barrier without awarding prog
   assert.equal(score.saveData.totalEnergy, energy);
   assert.equal(score.distance, 0);
 });
-test('menu diorama owns its world and restores the game viewport after rendering', async () => {
-  const { MenuStage } = await import('../src/graphics/menu-stage.js');
+test("menu diorama owns its world and restores the game viewport after rendering", async () => {
+  const { MenuStage } = await import("../src/graphics/menu-stage.js");
   runtime();
   const stage = new MenuStage();
-  assert.ok(stage.world.tunnelSegments.every(segment=>!segment.visible));
-  const position=stage.camera.position.clone();
-  for(let i=0;i<120;i++)stage.update(1/60,'core');
+  assert.ok(stage.world.tunnelSegments.every((segment) => !segment.visible));
+  const position = stage.camera.position.clone();
+  for (let i = 0; i < 120; i++) stage.update(1 / 60, "core");
   assert.ok(stage.camera.position.equals(position));
-  const calls=[];
-  stage.render({setScissorTest(value){calls.push(['scissor',value])},setViewport(...args){calls.push(['viewport',...args])},setScissor(){},clear(){},render(scene,camera){assert.equal(scene,stage.scene);assert.equal(camera,stage.camera)}},1200,800);
-  assert.deepEqual(calls.at(-2),['scissor',false]);
-  assert.deepEqual(calls.at(-1),['viewport',0,0,1200,800]);
+  const calls = [];
+  stage.render(
+    {
+      setScissorTest(value) {
+        calls.push(["scissor", value]);
+      },
+      setViewport(...args) {
+        calls.push(["viewport", ...args]);
+      },
+      setScissor() {},
+      clear() {},
+      render(scene, camera) {
+        assert.equal(scene, stage.scene);
+        assert.equal(camera, stage.camera);
+      },
+    },
+    1200,
+    800,
+  );
+  assert.deepEqual(calls.at(-2), ["scissor", false]);
+  assert.deepEqual(calls.at(-1), ["viewport", 0, 0, 1200, 800]);
+});
+test("all 16 skins have movable elbow, knee and ankle chains", async () => {
+  const { SkinMeshBuilder } =
+    await import("../src/graphics/skin-mesh-builder.js");
+  const { SKINS_CATALOG } = await import("../src/data/skins.js");
+  const { RigAnimator } = await import("../src/graphics/rig-animator.js");
+  for (const skin of SKINS_CATALOG) {
+    const rig = SkinMeshBuilder.buildCharacterRig(skin);
+    for (const name of [
+      "leftElbow",
+      "rightElbow",
+      "leftKnee",
+      "rightKnee",
+      "leftAnkle",
+      "rightAnkle",
+    ])
+      assert.ok(rig.joints[name]?.parent, skin.id + ": " + name);
+    assert.equal(rig.joints.leftKnee.parent, rig.leftLeg);
+    assert.equal(rig.joints.leftAnkle.parent, rig.joints.leftKnee);
+    const animator = new RigAnimator();
+    animator.update(rig, 0.1, Math.PI / 2, false);
+    assert.ok(rig.joints.leftKnee.rotation.x > 0);
+    assert.ok(rig.joints.leftElbow.rotation.x < 0);
+    animator.update(rig, 0.1, 0, true, 0.5);
+    animator.update(rig, 0.05, 0, false);
+    assert.ok(animator.landing > 0);
+    SkinMeshBuilder.disposeRig(rig);
+  }
+});
+test("autonomous game actually collects coins and passes hazards over time", async () => {
+  const { MenuStage } = await import("../src/graphics/menu-stage.js");
+  runtime();
+  const stage = new MenuStage();
+  for (let i = 0; i < 900; i++) stage.update(1 / 30, "core");
+  assert.ok(stage.director.coins > 0, "must visibly pick up coins");
+  assert.ok(stage.director.dodges > 0, "must pass obstacles");
 });

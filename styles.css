@@ -596,3 +596,18 @@ select:focus-visible {
     font-size: 8px;
   }
 }
+.demo-metrics {
+  color: #8da3ba;
+  font-size: 9px;
+  letter-spacing: 1px;
+  margin-top: 14px;
+}
+.demo-metrics b {
+  color: #ffd369;
+  font-size: 17px;
+  margin-right: 5px;
+}
+.demo-metrics span {
+  margin: 0 12px;
+  color: #48607c;
+}

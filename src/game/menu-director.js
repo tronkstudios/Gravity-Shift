@@ -6,9 +6,19 @@ export class MenuDirector {
     this.elapsed = 0;
     this.lastShift = -5;
     this.speed = 21;
+    this.coins = 0;
+    this.dodges = 0;
+    this.crashed = false;
   }
   update(dt, world, gravity, player) {
     this.elapsed += dt;
+    if (this.crashed) return;
+    for (const obstacle of world.obstacles) {
+      if (!obstacle.demoPassed && obstacle.mesh.position.z > 2) {
+        obstacle.demoPassed = true;
+        this.dodges++;
+      }
+    }
     if (gravity.isTransitioning) return;
     const current = gravity.targetSurface.id;
     const danger = world.obstacles.filter(
@@ -34,9 +44,7 @@ export class MenuDirector {
           orb.mesh.position.z < -5 &&
           orb.mesh.position.z > -45
         )
-          cost -= 0.16;
-      // A slow scenic preference encourages varied poses when the path is clear.
-      if (key === SURFACE_KEYS[Math.floor(this.elapsed / 3.8) % 4]) cost -= 0.6;
+          cost -= 0.7;
       return cost;
     };
     const choice = [...SURFACE_KEYS].sort((a, b) => rank(a) - rank(b))[0];
@@ -52,10 +60,13 @@ export class MenuDirector {
     world.checkCollisions(
       player,
       gravity,
-      () => player.emitBurst(5),
+      () => {
+        this.coins++;
+        player.emitBurst(7, 0xffca55);
+      },
       () => {
         // The demonstration recovers locally; it cannot end or reward a real run.
-        player.shieldTimer = 0.7;
+        this.crashed = true;
         player.emitBurst(12);
       },
     );

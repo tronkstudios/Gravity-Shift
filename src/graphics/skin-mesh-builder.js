@@ -111,6 +111,14 @@ export class SkinMeshBuilder {
     );
     spine.position.set(0, 0.12, 0.31);
     rig.torso.add(spine);
+    rig.joints = {
+      leftElbow: rig.leftArm.userData.joint,
+      rightElbow: rig.rightArm.userData.joint,
+      leftKnee: rig.leftLeg.userData.joint,
+      rightKnee: rig.rightLeg.userData.joint,
+      leftAnkle: rig.leftLeg.userData.endJoint,
+      rightAnkle: rig.rightLeg.userData.endJoint,
+    };
     return rig;
   }
 
@@ -261,8 +269,32 @@ export class SkinMeshBuilder {
       ? new THREE.CylinderGeometry(w * 0.46, w * 0.38, h * 0.5, 12)
       : new THREE.BoxGeometry(w * 0.92, h * 0.5, d * 0.92);
     const lower = new THREE.Mesh(lowerGeo, matPrimary);
-    lower.position.y = -h * 0.75;
-    group.add(lower);
+    const hinge = new THREE.Group();
+    hinge.position.y = -h * 0.5;
+    group.add(hinge);
+    lower.position.y = -h * 0.25;
+    hinge.add(lower);
+    const end = new THREE.Group();
+    end.position.y = -h * 0.5;
+    hinge.add(end);
+    const isLeg = h > 0.65;
+    const extremity = new THREE.Mesh(
+      new THREE.BoxGeometry(
+        w * 1.05,
+        isLeg ? 0.12 : 0.13,
+        isLeg ? 0.32 : d * 1.15,
+      ),
+      matSecondary,
+    );
+    extremity.position.set(0, -0.025, isLeg ? -0.07 : 0);
+    end.add(extremity);
+    const bearing = new THREE.Mesh(
+      new THREE.SphereGeometry(w * 0.42, 10, 8),
+      matSecondary,
+    );
+    hinge.add(bearing);
+    group.userData.joint = hinge;
+    group.userData.endJoint = end;
   }
 
   static populateSkinSpecificGeometry(
