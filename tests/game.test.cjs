@@ -316,14 +316,13 @@ test("menu autopilot avoids an approaching surface barrier without awarding prog
   assert.equal(score.saveData.totalEnergy, energy);
   assert.equal(score.distance, 0);
 });
-test("menu diorama owns its world and restores the game viewport after rendering", async () => {
+test("interior menu game keeps tunnel walls visible and restores the full viewport", async () => {
   const { MenuStage } = await import("../src/graphics/menu-stage.js");
   runtime();
   const stage = new MenuStage();
-  assert.ok(stage.world.tunnelSegments.every((segment) => !segment.visible));
-  const position = stage.camera.position.clone();
+  assert.ok(stage.world.tunnelSegments.every((segment) => segment.visible));
   for (let i = 0; i < 120; i++) stage.update(1 / 60, "core");
-  assert.ok(stage.camera.position.equals(position));
+  assert.ok(Number.isFinite(stage.camera.position.x));
   const calls = [];
   stage.render(
     {

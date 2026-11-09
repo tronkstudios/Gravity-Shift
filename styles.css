@@ -611,3 +611,31 @@ select:focus-visible {
   margin: 0 12px;
   color: #48607c;
 }
+/* Restored full-screen interior gameplay, with a restrained readable menu scrim. */
+body:has(#screen-main-menu:not(.hidden)) #canvas-container::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(
+      90deg,
+      #070e1aee 0%,
+      #070e1acc 28%,
+      #070e1a40 53%,
+      transparent 72%
+    ),
+    linear-gradient(0deg, #070e1a80, transparent 30%);
+}
+#screen-main-menu .demo-label {
+  left: auto;
+  right: 5%;
+  bottom: 5%;
+  background: #0a1421bb;
+  border-left-color: #65b4c5;
+}
+@media (max-width: 899px) {
+  body:has(#screen-main-menu:not(.hidden)) #canvas-container::after {
+    background: linear-gradient(180deg, #070e1ae8, transparent 65%);
+  }
+}

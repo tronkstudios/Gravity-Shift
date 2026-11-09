@@ -58,3 +58,5 @@ Los chasis incluyen ahora pivotes reales de codos, rodillas y tobillos, manos y 
 Las direcciones rápidas se almacenan durante el cambio de superficie, con interpolación quintica y llegada sin salto. Los chasis incorporan cinco familias de siluetas (pesada, sigilo, carreras, celestial y técnica), armadura de hombros y rodillas, paneles pectorales y detalles animados. El piloto prioriza las cadenas de monedas con histéresis para evitar cambios de ruta innecesarios.
 
 La carrera usa ahora una trayectoria de pie con apoyo y recuperación, resuelta mediante cinemática inversa de dos segmentos. Se corrigió el sentido de flexión de rodillas y codos y se redujeron el giro del tronco, la oscilación vertical y el rebote añadido durante los cambios de gravedad. No utiliza captura de movimiento.
+
+La vista de menú vuelve al interior del túnel y a la perspectiva trasera de la partida a pantalla completa; se retira la maqueta lateral. La arquitectura del túnel comparte ahora luces de servicio cálidas, guías frías, ventilaciones y paneles. Los personajes tienen hombreras redondeadas y detalles dorsales para esta perspectiva.

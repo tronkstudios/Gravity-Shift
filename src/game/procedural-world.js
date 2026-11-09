@@ -1,3 +1,4 @@
+import { addTunnelAtmosphere } from "../graphics/tunnel-atmosphere.js";
 import * as THREE from "three";
 import { PALETTE } from "../config/palette.js";
 import { TUNNEL } from "../config/palette.js";
@@ -22,6 +23,7 @@ export class ProceduralWorld {
 
     this.initSharedMaterials();
     this.initTunnelPool();
+    addTunnelAtmosphere(this.scene, this.tunnelSegments);
     this.initSpeedDust();
   }
 

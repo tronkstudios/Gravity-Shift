@@ -17,8 +17,31 @@ export function addArmorDetails(rig, skin) {
           : "technical";
   rig.designFamily = family;
   const { matPrimary, matSecondary, matGlow } = rig.materials;
+  const fabric = new THREE.MeshStandardMaterial({
+    color: stealth ? 0x111720 : 0x25303b,
+    roughness: 0.95,
+    metalness: 0.05,
+  });
+  const spine = new THREE.Mesh(new THREE.BoxGeometry(0.27, 0.42, 0.1), fabric);
+  spine.position.set(0, 0.13, 0.28);
+  rig.torso.add(spine);
+  for (const sign of [-1, 1]) {
+    const shoulderBlade = new THREE.Mesh(
+      new THREE.SphereGeometry(0.16, 12, 8),
+      matPrimary,
+    );
+    shoulderBlade.scale.set(1, 0.85, 0.45);
+    shoulderBlade.position.set(sign * 0.18, 0.25, 0.27);
+    rig.torso.add(shoulderBlade);
+    const rearMark = new THREE.Mesh(
+      new THREE.BoxGeometry(0.035, 0.19, 0.02),
+      matGlow,
+    );
+    rearMark.position.set(sign * 0.17, 0.2, 0.35);
+    rig.torso.add(rearMark);
+  }
   const bevel = (w, h, d, material) =>
-    new THREE.Mesh(new THREE.BoxGeometry(w, h, d), material);
+    new THREE.Mesh(new THREE.BoxGeometry(w, h, d).toNonIndexed(), material);
   for (const [arm, sign] of [
     [rig.leftArm, -1],
     [rig.rightArm, 1],
@@ -26,11 +49,12 @@ export function addArmorDetails(rig, skin) {
     const shoulder = new THREE.Mesh(
       heavy
         ? new THREE.DodecahedronGeometry(0.24, 0)
-        : new THREE.ConeGeometry(stealth ? 0.14 : 0.19, racer ? 0.32 : 0.22, 4),
+        : new THREE.SphereGeometry(stealth ? 0.13 : 0.17, 12, 8),
       matSecondary,
     );
     shoulder.rotation.z = sign * (racer ? 0.75 : 0.3);
     shoulder.position.set(sign * 0.055, 0.015, 0);
+    shoulder.scale.set(1, heavy ? 1 : 0.7, 1);
     arm.add(shoulder);
     const inlay = bevel(0.045, heavy ? 0.19 : 0.12, 0.025, matGlow);
     inlay.position.set(sign * 0.13, -0.035, -0.1);
