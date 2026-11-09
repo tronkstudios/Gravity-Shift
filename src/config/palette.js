@@ -1,0 +1,19 @@
+export const PALETTE = {
+  VOID: 0x10151d,
+  STEEL: 0x263747,
+  STEEL_DARK: 0x18232e,
+  CYAN: 0x00d9ff,
+  WHITE: 0xf2f4f5,
+  HAZARD: 0xff654a,
+  GOLD: 0xffb800,
+  VIOLET: 0xbd00ff,
+};
+
+export const TUNNEL = {
+  HALF_SIZE: 7.0,
+  SURFACE_OFFSET: 6.15,
+  SEGMENT_LENGTH: 20.0,
+  POOL_SEGMENTS: 18,
+  VISIBLE_AHEAD: 300.0,
+  DESPAWN_Z: 28.0,
+};

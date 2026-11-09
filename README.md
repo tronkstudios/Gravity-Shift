@@ -1,44 +1,48 @@
 # Gravity Shift — Evolved
 
-Runner 3D de cuatro superficies basado en los archivos originales del proyecto. Conserva el cambio de gravedad, los personajes 3D, las 16 skins, el hangar interactivo, las semillas, el sonido, los ajustes y el guardado local V2.
+Runner 3D de cuatro superficies, basado en el juego original. Mantiene el hangar, las 16 skins, las semillas y el progreso local V2. Incluye cuenta atrás, avisos de peligro, reto de 250 metros, controles táctiles y correcciones de colisiones y memoria.
 
-## Mejoras
+## Desarrollo
 
-- Menú con jerarquía más clara y adaptación a móvil, orientación horizontal y zonas seguras.
-- Cuenta atrás cancelable de tres segundos con instrucciones antes de cada partida.
-- Avisos de peligro al aproximarse un obstáculo a la superficie seleccionada e indicador del control activo.
-- Reto por partida: alcanzar 250 metros otorga 75 de energía una sola vez, también si se revive. Combos con feedback visual.
-- Simulación con pasos de 1/120 s para detectar obstáculos finos a máxima velocidad incluso con fotogramas de 50 ms.
-- Pausa automática al perder el foco o cambiar de pestaña; el tiempo pausado no mueve los obstáculos.
-- Liberación de geometrías al reciclar obstáculos y de geometrías/materiales al cambiar de chasis. Geometría compartida para orbes.
-- Validación de valores y personajes del guardado local. Conserva la clave original `GRAVITY_SHIFT_SAVE_V2` en el mismo origen.
-- Exportación limpia: elimina canvases generados y devuelve la interfaz al menú antes de descargar el código.
-- Foco de teclado visible, avisos accesibles y respeto a la preferencia de movimiento reducido en flashes y sacudidas.
-
-## Ejecutar y editar
-
-Requiere Node.js 22 o superior para compilar y ejecutar pruebas. El juego no necesita instalación de paquetes.
+Node.js 22 o superior:
 
 ```sh
+npm ci
 npm run check
+npm run dev
 ```
 
-Abre `index.html` o sirve la carpeta con un servidor estático. Para alojamiento publica `dist/`. Three.js r128 está incluido en `vendor/` bajo licencia MIT; Tailwind, Font Awesome y Google Fonts requieren conexión a sus CDN. El archivo descargado mediante la opción de exportación usa Three.js desde CDN.
+La URL local es `http://localhost:4173`. Después de editar fuentes, reconstruye y recarga. `npm run build` genera `dist/`, listo para hosting estático. `npm run package` añade un ZIP de las fuentes a la distribución; este último comando requiere Python 3. CI genera y adjunta la distribución en cada push/PR.
 
-Fuentes editables:
+## Organización
 
-- `game.js`: motor, mundo, personajes e interacción.
-- `styles.css`: estilos originales y mejoras visuales.
-- `src/index.template.html`: interfaz de origen.
-- `scripts/build.mjs`: genera `index.html` y `dist/` desde las fuentes, sin duplicación manual.
-- `tests/game.test.cjs`: siete comprobaciones sobre guardado, recompensa, colisión a baja tasa de fotogramas, liberación de geometría, simulación, controles y pausa.
+```text
+src/
+  main.js             Arranque y error de inicialización
+  app/                Coordinador y ciclo de partida
+  game/               Gravedad, jugador, mundo y colisiones
+  graphics/           Modelos, cámara y hangar
+  ui/                 Presentación, HUD y entradas
+  state/              Puntuación, economía y reto
+  persistence/        Adaptador de guardado local
+  services/           Audio y anuncios recompensados
+  config/             Constantes y superficies
+  data/               Catálogo de skins
+scripts/              Compilación, servidor local y empaquetado
+tests/               Pruebas de comportamiento e integración
+docs/                Decisiones y límites de arquitectura
+```
 
-Después de editar, ejecuta `npm run build`. El botón de exportación del juego sigue ofreciendo HTML, CSS y JavaScript.
+[Arquitectura y dependencias](docs/architecture.md). Los módulos ES son la fuente de verdad. `index.html`, `game.js` y `dist/` son resultados generados y no se editan ni versionan. Three.js está fijado en 0.128.0 por compatibilidad y se incluye en el bundle.
 
-## Verificación y límites
+## Verificación
 
-Las pruebas ejercitan las clases reales del juego con las matemáticas de Three.js; no sustituyen una prueba WebGL en dispositivos. La comprobación visual de navegador no está disponible en este entorno. No se han compilado aplicaciones nativas ni publicado versiones en App Store o Google Play.
+Nueve pruebas cubren guardado, recompensa única, colisiones con fotogramas de 50 ms, liberación de geometrías, tiempo de simulación, controles, pausa, composición de la aplicación y ausencia de ciclos entre módulos. La prueba de composición sustituye el renderer: no certifica el resultado visual de WebGL. Falta una revisión visual en navegador y en dispositivos.
 
-La integración de anuncios original se conserva: no se muestran anuncios reales sin un proveedor conectado. No se simulan ingresos ni se conceden skins de publicidad sin callback de recompensa.
+## Datos, anuncios y móvil
 
-El progreso se guarda únicamente en el navegador. Al probar en un dominio distinto no se transfiere automáticamente el guardado del dominio anterior.
+Solo se guarda progreso en localStorage. El adaptador conserva la clave `GRAVITY_SHIFT_SAVE_V2` del juego original. No se transfieren partidas automáticamente entre dominios o dispositivos.
+
+La integración publicitaria original se mantiene sin proveedor activo: no hay anuncios reales ni ingresos. Las skins de anuncios requieren callback de recompensa de un proveedor conectado.
+
+Esta entrega es web. No contiene binarios nativos firmados ni publicaciones en App Store o Google Play. Las fuentes e iconos se descargan de sus CDN; el motor se sirve localmente.
