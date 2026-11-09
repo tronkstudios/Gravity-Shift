@@ -316,3 +316,16 @@ test("menu autopilot avoids an approaching surface barrier without awarding prog
   assert.equal(score.saveData.totalEnergy, energy);
   assert.equal(score.distance, 0);
 });
+test('menu diorama owns its world and restores the game viewport after rendering', async () => {
+  const { MenuStage } = await import('../src/graphics/menu-stage.js');
+  runtime();
+  const stage = new MenuStage();
+  assert.ok(stage.world.tunnelSegments.every(segment=>!segment.visible));
+  const position=stage.camera.position.clone();
+  for(let i=0;i<120;i++)stage.update(1/60,'core');
+  assert.ok(stage.camera.position.equals(position));
+  const calls=[];
+  stage.render({setScissorTest(value){calls.push(['scissor',value])},setViewport(...args){calls.push(['viewport',...args])},setScissor(){},clear(){},render(scene,camera){assert.equal(scene,stage.scene);assert.equal(camera,stage.camera)}},1200,800);
+  assert.deepEqual(calls.at(-2),['scissor',false]);
+  assert.deepEqual(calls.at(-1),['viewport',0,0,1200,800]);
+});

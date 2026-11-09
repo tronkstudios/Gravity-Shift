@@ -494,3 +494,105 @@ select:focus-visible {
     display: none;
   }
 }
+/* Cutaway menu: separate stage and editorial controls, visibly unlike gameplay. */
+#screen-main-menu {
+  display: flex;
+  justify-content: flex-start;
+  max-width: 1400px;
+}
+#screen-main-menu.hidden {
+  display: none;
+}
+#screen-main-menu > div:first-child {
+  width: 43%;
+  flex: none;
+  padding: 24px 24px 24px 0;
+  background: none;
+  border-radius: 0;
+}
+#screen-main-menu > div:last-child {
+  display: none !important;
+}
+#screen-main-menu h1 {
+  font-size: clamp(64px, 7vw, 108px);
+  line-height: 0.84;
+  letter-spacing: -0.075em;
+  margin: 28px 0;
+}
+#screen-main-menu > div:first-child > p {
+  font-size: 13px;
+  max-width: 360px;
+  color: #8ca4b9;
+}
+#screen-main-menu .mission-card {
+  border: 0;
+  border-left: 2px solid #485bff;
+  border-radius: 0;
+  background: #2634671c;
+}
+#screen-main-menu > div:first-child > div:nth-child(4) {
+  flex-wrap: wrap;
+}
+#screen-main-menu #btn-start-game {
+  width: 100%;
+  max-width: 390px;
+  justify-content: space-between;
+  padding: 20px 24px;
+  font-size: 19px;
+  border-radius: 4px;
+}
+#btn-open-shop,
+#btn-open-settings {
+  font-size: 11px;
+  padding: 12px 18px;
+  border-radius: 4px;
+}
+#screen-main-menu .demo-label {
+  position: fixed;
+  left: 55%;
+  right: auto;
+  bottom: 8%;
+  border: 1px solid #354d6755;
+  border-left: 3px solid #7b71ff;
+  padding: 16px 24px;
+  border-radius: 4px;
+  background: #111e30d9;
+}
+#top-nav-bar {
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid #51617e44;
+  border-radius: 0;
+  backdrop-filter: none;
+}
+@media (max-width: 899px) {
+  #screen-main-menu {
+    align-items: flex-start;
+    margin: 0 !important;
+    padding-top: 15px;
+  }
+  #screen-main-menu > div:first-child {
+    width: 100%;
+    padding: 10px;
+  }
+  #screen-main-menu h1 {
+    font-size: 48px;
+    margin: 12px 0;
+  }
+  #screen-main-menu h1 span {
+    display: inline;
+  }
+  #screen-main-menu .mission-card,
+  #screen-main-menu .demo-label,
+  #screen-main-menu > div:first-child > p,
+  #screen-main-menu > div:first-child > div.grid {
+    display: none;
+  }
+  #screen-main-menu #btn-start-game {
+    padding: 14px 20px;
+    max-width: 280px;
+  }
+  #screen-main-menu > div:first-child > div:first-child {
+    font-size: 8px;
+  }
+}

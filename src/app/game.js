@@ -1,3 +1,4 @@
+import { MenuStage } from "../graphics/menu-stage.js";
 import { MenuDirector } from "../game/menu-director.js";
 import * as THREE from "three";
 import { PALETTE } from "../config/palette.js";
@@ -40,6 +41,7 @@ export class GravityShiftGame {
     this.cameraCtrl = new CameraController(this.camera);
     this.world = new ProceduralWorld(this.scene, this.rng);
     this.menuDirector = new MenuDirector();
+    this.menuStage = new MenuStage();
     this.world.resetWorld();
 
     this.applySavedSettings();
@@ -229,11 +231,7 @@ export class GravityShiftGame {
     }
 
     if (this.state === "MENU") {
-      this.menuDirector.update(dt, this.world, this.gravitySys, this.player);
-      this.world.update(dt, this.menuDirector.speed, 0);
-      this.gravitySys.update(dt);
-      this.player.update(dt, this.menuDirector.speed, this.gravitySys, true);
-      this.cameraCtrl.update(dt, this.player, this.gravitySys, 18.0, true);
+      this.menuStage.update(dt, this.scoreMgr.saveData.equippedSkin);
     } else if (this.state === "COUNTDOWN") {
       this.countdownRemaining -= dt;
       document.getElementById("countdown-number").textContent = Math.max(
@@ -291,6 +289,14 @@ export class GravityShiftGame {
       this.cameraCtrl.update(dt, this.player, this.gravitySys, 0, false);
     }
 
-    this.renderer.render(this.scene, this.camera);
+    if (this.state === "MENU") {
+      this.menuStage.render(
+        this.renderer,
+        window.innerWidth,
+        window.innerHeight,
+      );
+    } else {
+      this.renderer.render(this.scene, this.camera);
+    }
   }
 }
