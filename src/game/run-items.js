@@ -66,7 +66,7 @@ export class RunItems {
       this.jumpTime += dt;
       if (this.jumpTime >= 0.8) {
         this.jumpTime = 0;
-        g.audio.playLanding();
+        if (!g.gravitySys.isTransitioning) g.audio.playLanding();
       }
     }
     const progress = this.jumpTime / 0.8;

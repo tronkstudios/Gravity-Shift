@@ -35,7 +35,7 @@ export class RareRunners {
     );
     beacon.position.y = 1.95;
     player.visualGroup.add(beacon);
-    this.active = { player, gravity, skin, z: -48, blink: 0 };
+    this.active = { player, gravity, skin, z: -48, emergencyDodges: 0 };
     this.seen = true;
     g.ui.showToast(
       "CORREDOR RARO · ALCANZA A " + skin.name + " PARA CONSEGUIR SU TRAJE",
@@ -118,6 +118,7 @@ export class RareRunners {
       rival.gravity.currentQuat,
     );
     if (this.contacts(rival.player.root.position, normal, rival.z)) {
+      rival.emergencyDodges++;
       const safe = SURFACE_KEYS.find(
         (key) =>
           !this.contacts(SURFACES[key].basePos, SURFACES[key].normal, rival.z),

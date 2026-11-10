@@ -265,7 +265,18 @@ export class Player {
       );
       this.visualGroup.rotation.x *= 1 - follow;
       this.visualGroup.rotation.y *= 1 - follow;
-      this.visualGroup.rotation.z *= 1 - follow;
+      this.visualGroup.rotation.z = THREE.MathUtils.lerp(
+        this.visualGroup.rotation.z,
+        this.boardActive
+          ? THREE.MathUtils.clamp(
+              (gravitySys.targetLateralOffset - gravitySys.lateralOffset) *
+                -0.055,
+              -0.12,
+              0.12,
+            )
+          : 0,
+        follow,
+      );
       if (!airborne)
         this.runCycleTime +=
           dt * Math.PI * 2 * Math.min(2.15, 1.35 + speed * 0.018);

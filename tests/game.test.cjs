@@ -1308,7 +1308,40 @@ test("rare runners travel slower and evade a real generated route without collid
       false,
     );
   }
+  assert.equal(
+    game.rivals.active.emergencyDodges,
+    0,
+    "the authored route is avoided by planning, without emergency repositioning",
+  );
   assert.ok(game.rivals.active.z > start);
   assert.ok(game.rivals.active.z < 0);
+  game.rivals.despawn();
+});
+
+test("rare runner anticipates late-game rows rather than teleporting out of hazards", () => {
+  const { game } = visualGame();
+  game.world.clearObjects();
+  game.world.rng.setSeed("NPC-HARD");
+  game.world.patternCounter = 4;
+  game.world.nextPatternZ = -36;
+  while (game.world.nextPatternZ > -430) game.world.spawnNextPattern(900);
+  game.player.root.position.x = 100;
+  game.currentSpeed = 40;
+  game.rivals.spawn("volt");
+  for (let i = 0; i < 900; i++) {
+    game.world.update(1 / 120, 40, 900 + (i / 120) * 18);
+    game.rivals.tick(1 / 120);
+    const rival = game.rivals.active;
+    assert.ok(rival);
+    assert.equal(
+      game.rivals.contacts(
+        rival.player.root.position,
+        rival.player.upDirection,
+        rival.z,
+      ),
+      false,
+    );
+  }
+  assert.equal(game.rivals.active.emergencyDodges, 0);
   game.rivals.despawn();
 });

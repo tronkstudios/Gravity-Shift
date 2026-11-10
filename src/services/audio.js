@@ -96,7 +96,12 @@ export class AudioManager {
     this.playTone(95, "sine", 0.12, 0.045, 48);
   }
   updateFootsteps(player, gravity) {
-    if (gravity.isTransitioning || player.jumpActive || player.isDead) {
+    if (
+      gravity.isTransitioning ||
+      player.jumpActive ||
+      player.boardActive ||
+      player.isDead
+    ) {
       this.lastFootMarker = null;
       return;
     }

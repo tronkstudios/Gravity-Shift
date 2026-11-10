@@ -489,7 +489,11 @@ export class GravityShiftGame {
         this.scoreMgr.updateFrame(step, this.currentSpeed);
         const wasAirborne = this.gravitySys.isTransitioning;
         this.gravitySys.update(step);
-        if (wasAirborne && !this.gravitySys.isTransitioning)
+        if (
+          wasAirborne &&
+          !this.gravitySys.isTransitioning &&
+          !this.player.jumpActive
+        )
           this.audio?.playLanding?.();
         if (
           this.gravitySys.shiftSequence !== undefined &&
