@@ -1,4 +1,5 @@
 import { batchTunnelSegments } from "../graphics/tunnel-batching.js";
+import { obstacleContact } from "./collision-shapes.js";
 import { RUN_PHRASES, zoneForDistance } from "../data/run-content.js";
 import { addTunnelAtmosphere } from "../graphics/tunnel-atmosphere.js";
 import * as THREE from "three";
@@ -503,11 +504,20 @@ export class ProceduralWorld {
       zone.id === "industrial" ? 52 : zone.id === "reactor" ? 56 : 60;
     const blockedCount =
       zone.id === "industrial" ? 1 : zone.id === "reactor" ? 2 : 3;
+    let rowZ = start;
     phrase.route.forEach((safe, beat) => {
-      const z = start - beat * spacing;
-      const candidates = SURFACE_KEYS.filter((key) => key !== safe);
+      const z = rowZ;
+      rowZ -= spacing * (phrase.rhythm?.[beat] || 1);
+      const branch =
+        phrase.fork && predictedDistance > 300 && beat === 1
+          ? SURFACE_KEYS[(SURFACE_KEYS.indexOf(safe) + 2) % 4]
+          : null;
+      const candidates = SURFACE_KEYS.filter(
+        (key) => key !== safe && key !== branch,
+      );
+      const rowBlockedCount = Math.min(blockedCount, candidates.length);
       // Rotate blocked faces per beat while retaining one verified safe coin path.
-      for (let j = 0; j < blockedCount; j++) {
+      for (let j = 0; j < rowBlockedCount; j++) {
         const face = candidates[(j + beat) % candidates.length];
         const kind =
           zone.id === "fracture" && beat === 1
@@ -517,8 +527,10 @@ export class ProceduralWorld {
         const ob = this.obstacles[this.obstacles.length - 1];
         ob.phrase = phrase.name;
         ob.safeSurface = safe;
+        ob.safeSurfaces = branch ? [safe, branch] : [safe];
       }
       this.spawnEnergyTrail(safe, z + 18, 4, 4);
+      if (branch) this.spawnEnergyTrail(branch, z + 18, 4, 4);
       if (predictedDistance > 120 && beat === 1)
         this.spawnEnergyTrail(
           candidates[beat % candidates.length],
@@ -530,7 +542,7 @@ export class ProceduralWorld {
       this.lastSafeSurface = safe;
     });
     this.patternCounter++;
-    this.nextPatternZ -= spacing * 3 + 24;
+    this.nextPatternZ = rowZ - 24;
   }
 
   update(dt, speed, distance) {
@@ -639,34 +651,16 @@ export class ProceduralWorld {
     // Skip hazard collision if emergency shield is active
     if (player.shieldTimer > 0) return;
 
-    // 2. Obstacles Check
-    for (let i = 0; i < this.obstacles.length; i++) {
-      const obs = this.obstacles[i];
-      if (Math.abs(obs.mesh.position.z) > obs.halfD + 0.55) continue;
-
-      if (obs.type === "ROTATING") {
-        // Distance from player torso center to rotating bar line segment
-        const surf = gravitySys.currentSurface;
-        const torsoX = playerPos.x + surf.normal.x * 1.0;
-        const torsoY = playerPos.y + surf.normal.y * 1.0;
-        const angle = obs.mesh.rotation.z;
-        const cosA = Math.cos(angle);
-        const sinA = Math.sin(angle);
-
-        const perpDist = Math.abs(-sinA * torsoX + cosA * torsoY);
-        if (perpDist < 0.95) {
-          onObstacleHit(obs);
-          return;
-        }
-      } else if (
-        obs.surfaceKey === gravitySys.currentSurface.id &&
-        !gravitySys.isTransitioning
-      ) {
-        const latDiff = Math.abs(gravitySys.lateralOffset - (obs.localX || 0));
-        if (latDiff < obs.halfW + 0.35) {
-          onObstacleHit(obs);
-          return;
-        }
+    // Test the body along its actual orientation, including every transfer step.
+    const normal = new THREE.Vector3(0, 1, 0).applyQuaternion(
+      gravitySys.currentQuat,
+    );
+    for (const obs of this.obstacles) {
+      const contact = obstacleContact(obs, playerPos, normal);
+      if (contact) {
+        obs.lastContact = contact;
+        onObstacleHit(obs);
+        return;
       }
     }
   }

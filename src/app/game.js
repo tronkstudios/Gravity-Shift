@@ -1,3 +1,4 @@
+import { RunReplay } from "../graphics/run-replay.js";
 import { HapticFeedback } from "../services/haptic-feedback.js";
 import { PlaytestMetrics } from "../services/playtest-metrics.js";
 import { AdaptiveQuality } from "../graphics/adaptive-quality.js";
@@ -60,6 +61,7 @@ export class GravityShiftGame {
     this.menuStage = new MenuStage();
     this.world.resetWorld();
     this.zoneController = new ZoneController(this.scene, this.world);
+    this.replay = new RunReplay(this);
 
     this.quality = new AdaptiveQuality(
       this.renderer,
@@ -139,6 +141,7 @@ export class GravityShiftGame {
   triggerSurfaceShift(surfaceKey) {
     const shifted = this.gravitySys.shiftTo(surfaceKey);
     if (shifted) {
+      this.lastFeedbackSequence = this.gravitySys.shiftSequence;
       this.metrics?.input();
       this.haptics?.play("shift");
       this.audio.playShiftSound(surfaceKey);
@@ -158,6 +161,7 @@ export class GravityShiftGame {
       throw new Error("Modo inválido");
     if (mode === "daily" && !validChallengeDate(challengeDate))
       throw new Error("Fecha de reto inválida");
+    this.replay?.clear();
     this.runMode = mode;
     this.scoreMgr.mode = mode;
     this.practice = mode === "practice" ? new PracticeController() : null;
@@ -244,6 +248,7 @@ export class GravityShiftGame {
     this.scoreMgr.reviveUsed = true;
     this.scoreMgr.persist();
     this.player.reset();
+    this.replay?.clear();
     this.player.shieldTimer = 3.5;
     // Move past the collision instead of returning directly into it.
     this.world.obstacles
@@ -347,13 +352,16 @@ export class GravityShiftGame {
     document.getElementById("go-reason").textContent =
       reason + " Sigue las monedas hacia otra superficie.";
     document.getElementById("go-perfects").textContent =
-      `${this.scoreMgr.perfects} cambios perfectos · ${Math.floor(this.scoreMgr.elapsed)} s`;
+      `${this.scoreMgr.perfects} cambios perfectos · ${Math.floor(this.scoreMgr.elapsed)} s · ${this.scoreMgr.contractIndex || 0} objetivos extra`;
     const adButton = document.getElementById("btn-reward-continue");
     adButton.hidden =
       this.runMode !== "normal" ||
       !this.adService.isProviderAvailable() ||
       this.scoreMgr.reviveUsed;
     adButton.disabled = false;
+    this.replay?.capture(true);
+    document.getElementById("btn-watch-replay").hidden =
+      (this.replay?.frames.length || 0) < 2;
     this.player.isDead = true;
     this.audio.stopMusic();
     this.audio.playImpactCrash();
@@ -419,7 +427,12 @@ export class GravityShiftGame {
     const frameSeconds = Math.max(0, (now - this.lastTime) / 1000);
     if (this.state === "PLAYING" || this.state === "MENU")
       this.quality?.update(frameSeconds);
-    const dt = Math.min(0.05, frameSeconds);
+    // Preserve elapsed simulation time down to 1 FPS; pause genuinely long stalls.
+    if (frameSeconds > 1 && this.state === "PLAYING") {
+      this.pauseGame();
+      this.ui.showToast("PAUSA AUTOMÁTICA · EL JUEGO DEJÓ DE RESPONDER", 3);
+    }
+    const dt = frameSeconds > 1 ? 0 : frameSeconds;
     this.lastTime = now;
 
     if (this.hangarStudio && this.hangarStudio.isActive) {
@@ -471,6 +484,12 @@ export class GravityShiftGame {
           this.gravitySys.shiftSequence !== this.lastShiftSequence
         ) {
           this.lastShiftSequence = this.gravitySys.shiftSequence;
+          if (this.lastFeedbackSequence !== this.lastShiftSequence) {
+            this.lastFeedbackSequence = this.lastShiftSequence;
+            this.audio.playShiftSound(this.gravitySys.targetSurface.id);
+            this.haptics?.play("shift");
+            this.world.notifySurfaceShift(this.gravitySys.targetSurface.id);
+          }
           if (
             judgePerfectShift(
               this.world.obstacles,
@@ -482,7 +501,12 @@ export class GravityShiftGame {
             perfectShift = true;
           }
         }
-        this.player.update(step, this.currentSpeed, this.gravitySys, false);
+        this.player.root.position.set(
+          this.gravitySys.currentPos2D.x,
+          this.gravitySys.currentPos2D.y,
+          0,
+        );
+        this.player.root.quaternion.copy(this.gravitySys.currentQuat);
         this.world.update(step, this.currentSpeed, this.scoreMgr.distance);
         this.world.checkCollisions(
           this.player,
@@ -495,6 +519,7 @@ export class GravityShiftGame {
             if (this.scoreMgr.multiplier > previous)
               this.ui.showToast(
                 "COMBO ×" + this.scoreMgr.multiplier.toFixed(1),
+                0,
               );
           },
           (obstacle) => {
@@ -505,9 +530,11 @@ export class GravityShiftGame {
         if (perfectShift && this.state === "PLAYING") {
           this.scoreMgr.awardPerfect();
           this.audio.playPerfect();
+          this.haptics?.play("perfect");
           this.player.emitBurst(20, 0xffd16c);
           this.ui.showToast(
             "CAMBIO PERFECTO · ×" + this.scoreMgr.multiplier.toFixed(1),
+            2,
           );
           document
             .getElementById("perfect-feedback")
@@ -519,9 +546,12 @@ export class GravityShiftGame {
           !hadMission &&
           this.scoreMgr.missionCompleted
         )
-          this.ui.showToast("RETO COMPLETADO · +75 DE ENERGÍA");
+          this.ui.showToast("RETO COMPLETADO · +75 DE ENERGÍA", 2);
+        while (this.state === "PLAYING" && this.scoreMgr.contractEvents?.length)
+          this.ui.showToast(this.scoreMgr.contractEvents.shift(), 2);
         this.fixedAccumulator -= step;
       }
+      this.player.update(dt, this.currentSpeed, this.gravitySys, false);
       if (this.runMode === "practice" && this.state === "PLAYING") {
         this.practice.update(dt, this);
         this.ui.updatePractice();
@@ -556,14 +586,17 @@ export class GravityShiftGame {
         document.getElementById("perfect-feedback").classList.add("hidden");
       while (this.state === "PLAYING" && this.scoreMgr.newUnlocks.length) {
         const skin = this.scoreMgr.newUnlocks.shift();
-        this.ui.showToast("PERSONAJE DESBLOQUEADO · " + skin.toUpperCase());
+        this.ui.showToast("PERSONAJE DESBLOQUEADO · " + skin.toUpperCase(), 3);
       }
       this.ui.updateHUD();
+    } else if (this.state === "REPLAY") {
+      this.replay.update(dt);
     } else if (this.state === "GAMEOVER") {
       this.player.update(dt, 0, this.gravitySys, false);
       this.cameraCtrl.update(dt, this.player, this.gravitySys, 0, false);
     }
 
+    if (this.state === "PLAYING") this.replay?.capture();
     if (this.state === "MENU") {
       this.menuStage.render(
         this.renderer,

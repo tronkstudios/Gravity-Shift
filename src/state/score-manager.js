@@ -1,3 +1,4 @@
+import { contractFor } from "../game/run-contracts.js";
 import { validChallengeDate } from "../game/daily-challenge.js";
 import { ACHIEVEMENTS } from "../data/run-content.js";
 import { BrowserSaveStore } from "../persistence/browser-save-store.js";
@@ -25,6 +26,9 @@ export class ScoreManager {
     this.streakProgress = 0;
     this.reviveUsed = false;
     this.missionCompleted = false;
+    this.contractIndex = 0;
+    this.contractStart = null;
+    this.contractEvents = [];
   }
 
   loadSaveData() {
@@ -142,6 +146,7 @@ export class ScoreManager {
       this.saveData.totalEnergy += 75;
       this.persist();
     }
+    this.checkContracts();
     this.score += dMeters * 12 * this.multiplier;
 
     if (this.streakProgress > 0) {
@@ -153,6 +158,20 @@ export class ScoreManager {
     }
   }
 
+  checkContracts() {
+    if (this.mode !== "normal" || !this.missionCompleted) return;
+    const contract = contractFor(this.contractIndex);
+    if (this.contractStart === null) this.contractStart = this[contract.metric];
+    if (this[contract.metric] - this.contractStart < contract.target) return;
+    this.runEnergy += contract.reward;
+    this.saveData.totalEnergy += contract.reward;
+    this.contractEvents.push(
+      `OBJETIVO ${this.contractIndex + 2} · +${contract.reward} ENERGÍA`,
+    );
+    this.contractIndex++;
+    this.contractStart = this[contractFor(this.contractIndex).metric];
+    this.persist();
+  }
   collectOrb(value = 1) {
     this.collectedCoins++;
     this.checkAchievements();
@@ -164,6 +183,7 @@ export class ScoreManager {
       this.multiplier = Math.min(5.0, +(this.multiplier + 0.5).toFixed(1));
     }
     this.score += 75 * this.multiplier * value;
+    this.checkContracts();
   }
 
   checkAchievements() {
@@ -187,6 +207,7 @@ export class ScoreManager {
     this.streakProgress = 1;
     this.score += 150 * this.multiplier;
     this.checkAchievements();
+    this.checkContracts();
   }
   finalizeRun() {
     if (this.mode !== "normal") return false;

@@ -66,6 +66,38 @@ RUN_PHRASES.push(
     hazards: ["BARRIER", "LASER", "HAZARD_ZONE"],
   },
 );
+RUN_PHRASES.push(
+  {
+    id: "spiral",
+    name: "ESPIRAL",
+    route: ["FLOOR", "LEFT", "CEILING", "RIGHT"],
+    hazards: ["LASER", "BARRIER", "LASER", "BARRIER"],
+    rhythm: [1, 1.12, 0.95, 1.15],
+  },
+  {
+    id: "pulse",
+    name: "PULSO DOBLE",
+    route: ["LEFT", "FLOOR", "RIGHT", "CEILING"],
+    hazards: ["MOVING", "LASER", "MOVING", "LASER"],
+    rhythm: [0.95, 1.2, 0.95, 1.2],
+  },
+  {
+    id: "fork",
+    name: "BIFURCACIÓN",
+    route: ["FLOOR", "CEILING", "RIGHT"],
+    hazards: ["BARRIER", "LASER", "HAZARD_ZONE"],
+    fork: true,
+    rhythm: [1.15, 1.2, 1],
+  },
+  {
+    id: "cross",
+    name: "CRUCE ALTERNATIVO",
+    route: ["RIGHT", "LEFT", "FLOOR", "CEILING"],
+    hazards: ["LASER", "BARRIER", "MOVING", "LASER"],
+    fork: true,
+    rhythm: [1.1, 1.15, 1, 1.1],
+  },
+);
 export const ACHIEVEMENTS = [
   {
     id: "survivor",

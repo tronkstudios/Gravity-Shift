@@ -1,3 +1,6 @@
+import { styleForSkin } from "../data/skin-styles.js";
+import { NotificationQueue } from "../services/notification-queue.js";
+import { contractProgress } from "../game/run-contracts.js";
 import { Capacitor } from "@capacitor/core";
 import { dailyDate, challengeUrl } from "../game/daily-challenge.js";
 import { exportBackup, parseBackup } from "../persistence/save-backup.js";
@@ -9,6 +12,12 @@ import { SKINS_CATALOG } from "../data/skins.js";
 export class GameUI {
   constructor(game) {
     this.game = game;
+    this.notifications = new NotificationQueue((text) => {
+      const toast = document.getElementById("toast-msg");
+      toast.textContent = text || "";
+      toast.classList.toggle("opacity-0", !text);
+      toast.classList.toggle("translate-y-4", !text);
+    });
     this.selectedShopSkinId = game.scoreMgr.saveData.equippedSkin;
     this.activeShopFilter = "ALL";
     this.activeExportTab = "html";
@@ -201,6 +210,8 @@ export class GameUI {
 
   clearTransientFeedback() {
     this.game.audio?.cancelFeedback?.();
+    this.notifications?.clear();
+    document.getElementById("queued-shift").hidden = true;
     clearTimeout(this.toastTimeout);
     clearTimeout(this.flashTimeout);
     document.getElementById("perfect-feedback").classList.add("hidden");
@@ -222,14 +233,8 @@ export class GameUI {
     }, 140);
   }
 
-  showToast(msg) {
-    const toast = document.getElementById("toast-msg");
-    toast.textContent = msg;
-    toast.classList.remove("opacity-0", "translate-y-4");
-    clearTimeout(this.toastTimeout);
-    this.toastTimeout = setTimeout(() => {
-      toast.classList.add("opacity-0", "translate-y-4");
-    }, 2500);
+  showToast(msg, priority = 1) {
+    this.notifications.push(msg, priority);
   }
 
   openSettingsModal() {
@@ -286,7 +291,9 @@ export class GameUI {
       (achievement
         ? " También se desbloquea gratis: " + achievement.label + "."
         : "");
-    document.getElementById("preview-skin-poly").textContent = skin.polyTag;
+    document.getElementById("preview-skin-poly").textContent = styleForSkin(
+      skin.id,
+    ).label;
 
     const statusEl = document.getElementById("preview-skin-status");
     statusEl.textContent = isEquipped
@@ -502,10 +509,17 @@ export class GameUI {
 
   updateHUD() {
     this.updateSaveStatus();
+    const queued = this.game.gravitySys.pendingSurface;
+    const queuedLabel = document.getElementById("queued-shift");
+    queuedLabel.textContent = queued
+      ? "SIGUIENTE: " + SURFACES[queued].label
+      : "";
+    queuedLabel.hidden = !queued;
     this.updateCompassUI(this.game.gravitySys.targetSurface.id);
     const score = this.game.scoreMgr;
     const best =
       score.saveData.dailyRecords[this.game.challengeDate]?.score || 0;
+    const contract = contractProgress(score);
     const label =
       this.game.runMode === "practice"
         ? "PRÁCTICA · SIN RECOMPENSAS"
@@ -514,7 +528,7 @@ export class GameUI {
             ? `RÉCORD DEL RETO: ${best}`
             : "MARCA EL PRIMER RÉCORD DEL RETO"
           : score.missionCompleted
-            ? "RETO COMPLETADO · +75 ENERGÍA"
+            ? `${contract.label} ${Math.floor(contract.progress)} / ${contract.target} ${contract.unit} · +${contract.reward}`
             : `RETO ${Math.floor(score.distance)} / 250 m`;
     const progress =
       this.game.runMode === "practice"
@@ -525,7 +539,9 @@ export class GameUI {
           ? best
             ? Math.min(100, (score.score / best) * 100)
             : 0
-          : Math.min(100, score.distance / 2.5);
+          : score.missionCompleted
+            ? (100 * contract.progress) / contract.target
+            : Math.min(100, score.distance / 2.5);
     document.getElementById("mission-label").textContent = label;
     document.getElementById("mission-bar").style.width = progress + "%";
     const hazard = this.game.world.obstacles.some(
@@ -548,13 +564,19 @@ export class GameUI {
     cue.textContent =
       nextHazard?.type === "ROTATING"
         ? "BARRA GIRATORIA · BUSCA EL HUECO"
-        : nextHazard?.safeSurface
-          ? "PELIGRO · VE A " + SURFACES[nextHazard.safeSurface].label
-          : "PELIGRO · CAMBIA DE SUPERFICIE";
+        : nextHazard?.safeSurfaces?.length > 1
+          ? "DOS SALIDAS · " +
+            nextHazard.safeSurfaces
+              .map((key) => SURFACES[key].label)
+              .join(" / ")
+          : nextHazard?.safeSurface
+            ? "PELIGRO · VE A " + SURFACES[nextHazard.safeSurface].label
+            : "PELIGRO · CAMBIA DE SUPERFICIE";
     document.querySelectorAll(".surface-pad-btn").forEach((btn) => {
       const active =
         btn.dataset.surface === this.game.gravitySys.targetSurface.id;
       btn.classList.toggle("surface-active", active);
+      btn.classList.toggle("surface-queued", btn.dataset.surface === queued);
       btn.setAttribute("aria-pressed", String(active));
     });
     document.getElementById("hud-score").textContent = Math.floor(

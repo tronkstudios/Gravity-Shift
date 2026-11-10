@@ -104,7 +104,13 @@ test("250m mission pays exactly once and resets for a new run", () => {
   assert.equal(s.runEnergy, 0);
 });
 test("thin laser cannot be skipped at maximum speed with 20 FPS frames", () => {
-  const { GravityShiftGame, ProceduralWorld, THREE, ScoreManager } = runtime();
+  const {
+    GravityShiftGame,
+    ProceduralWorld,
+    THREE,
+    ScoreManager,
+    GravitySystem,
+  } = runtime();
   const g = Object.create(GravityShiftGame.prototype);
   let hits = 0;
   const obs = {
@@ -113,7 +119,7 @@ test("thin laser cannot be skipped at maximum speed with 20 FPS frames", () => {
     halfD: 0.6,
     halfW: 5.4,
     localX: 0,
-    mesh: { position: { z: -1.6 } },
+    mesh: { position: new THREE.Vector3(0, -6.97, -1.6) },
   };
   const world = {
     obstacles: [obs],
@@ -127,16 +133,14 @@ test("thin laser cannot be skipped at maximum speed with 20 FPS frames", () => {
     state: "PLAYING",
     lastTime: 0,
     fixedAccumulator: 0,
+    lastShiftSequence: 0,
+    lastFeedbackSequence: 0,
     baseSpeed: 68,
     maxSpeed: 68,
     scoreMgr: new ScoreManager(),
-    gravitySys: {
-      lateralOffset: 0,
-      currentSurface: { id: "FLOOR", normal: { x: 0, y: 1 } },
-      update() {},
-    },
+    gravitySys: new GravitySystem(),
     player: {
-      root: { position: new THREE.Vector3() },
+      root: new THREE.Group(),
       shieldTimer: 0,
       update() {},
     },
@@ -1111,4 +1115,74 @@ test("finishing practice opens its completion screen and never modifies the prof
     false,
   );
   assert.equal(JSON.stringify(game.scoreMgr.saveData), before);
+});
+
+test("run time and distance agree at 60 and 10 FPS, while a long stall pauses safely", () => {
+  function run(frame, count) {
+    const { game } = visualGame();
+    game.world.clearObjects();
+    game.world.nextPatternZ = -10000;
+    for (let i = 0; i < count; i++) game.animate(game.lastTime + frame);
+    return game;
+  }
+  const smooth = run(1000 / 60, 60),
+    slow = run(100, 10);
+  assert.ok(Math.abs(smooth.scoreMgr.elapsed - slow.scoreMgr.elapsed) < 0.01);
+  assert.ok(Math.abs(smooth.scoreMgr.distance - slow.scoreMgr.distance) < 0.2);
+  assert.ok(slow.scoreMgr.elapsed > 0.99);
+  const before = slow.scoreMgr.distance;
+  slow.animate(slow.lastTime + 1500);
+  assert.equal(slow.state, "PAUSED");
+  assert.equal(slow.scoreMgr.distance, before);
+});
+test("successive contracts award once and remain isolated from daily and practice profiles", () => {
+  const { ScoreManager } = runtime();
+  const s = new ScoreManager();
+  const before = s.saveData.totalEnergy;
+  s.distance = 250;
+  s.updateFrame(0, 30);
+  assert.equal(s.saveData.totalEnergy, before + 75);
+  assert.equal(s.contractIndex, 0);
+  s.distance = 750;
+  s.updateFrame(0, 30);
+  assert.equal(s.contractIndex, 1);
+  const earned = s.saveData.totalEnergy;
+  s.updateFrame(0, 30);
+  assert.equal(s.saveData.totalEnergy, earned);
+  for (let i = 0; i < 20; i++) s.collectOrb();
+  assert.equal(s.contractIndex, 2);
+  assert.equal(s.saveData.totalEnergy, earned + 20 + 75);
+  s.mode = "daily";
+  const saved = s.saveData.totalEnergy;
+  for (let i = 0; i < 3; i++) s.awardPerfect();
+  assert.equal(s.saveData.totalEnergy, saved);
+  s.resetRun();
+  assert.equal(s.contractIndex, 0);
+});
+test("death playback restores world transforms and cannot change score, currency or run identity", () => {
+  const { game, THREE } = visualGame();
+  game.world.clearObjects();
+  game.world.nextPatternZ = -10000;
+  game.world.spawnSurfaceObstacle("FLOOR", -25, "BARRIER");
+  for (let i = 0; i < 10; i++) game.animate(game.lastTime + 50);
+  game.lastDeath = game.world.obstacles[0];
+  game.lastDeath.lastContact = { x: 0, y: -6, z: 0 };
+  game.handleGameOver();
+  const snapshot = {
+    score: game.scoreMgr.score,
+    energy: game.scoreMgr.saveData.totalEnergy,
+    runId: game.runId,
+    z: game.lastDeath.mesh.position.z,
+    position: game.player.root.position.clone(),
+  };
+  assert.ok(game.replay.start());
+  assert.equal(game.state, "REPLAY");
+  game.replay.update(0.4);
+  game.replay.stop();
+  assert.equal(game.state, "GAMEOVER");
+  assert.equal(game.scoreMgr.score, snapshot.score);
+  assert.equal(game.scoreMgr.saveData.totalEnergy, snapshot.energy);
+  assert.equal(game.runId, snapshot.runId);
+  assert.equal(game.lastDeath.mesh.position.z, snapshot.z);
+  assert.ok(game.player.root.position.distanceTo(snapshot.position) < 1e-9);
 });

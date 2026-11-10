@@ -112,6 +112,21 @@
         </button>
       </div>
     </section>
+    <div id="queued-shift" class="queued-shift" hidden role="status"></div>
+    <section
+      id="replay-overlay"
+      class="replay-overlay"
+      hidden
+      aria-label="Repetición de la derrota"
+    >
+      <strong id="replay-caption">ÚLTIMO SEGUNDO</strong
+      ><button id="btn-close-replay" class="brutal-btn">
+        VOLVER AL RESUMEN
+      </button>
+      <p>
+        El recuadro marca el obstáculo; el punto señala el contacto calculado.
+      </p>
+    </section>
     <!-- Toast Notification -->
     <div
       role="status"
@@ -657,12 +672,12 @@
                 </h2>
                 <span
                   class="px-2 py-0.5 text-[10px] font-mono bg-cyan/15 border border-cyan/50 text-cyan rounded"
-                  >16 MODELOS 3D ÚNICOS</span
+                  >16 TRAJES · 5 FAMILIAS</span
                 >
               </div>
               <p class="text-xs font-mono text-coldwhite/70">
-                CADA TRAJE POSEE GEOMETRÍA TRIDIMENSIONAL, SILUETA Y ANIMACIONES
-                PROPIAS
+                ELIGE TU ESTILO. ARRASTRA EL PERSONAJE PARA INSPECCIONAR EL
+                TRAJE.
               </p>
             </div>
             <div class="flex items-center gap-3">
@@ -907,6 +922,13 @@
             COMPARTIR ESTE RETO ↗
           </button>
           <p id="go-reason" class="death-reason"></p>
+          <button
+            id="btn-watch-replay"
+            class="brutal-btn w-full p-3 rounded"
+            hidden
+          >
+            VER ÚLTIMO SEGUNDO
+          </button>
           <p id="go-perfects" class="run-detail"></p>
           <button
             id="btn-reward-continue"

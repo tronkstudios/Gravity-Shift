@@ -22,9 +22,12 @@ export class CameraController {
     this.smoothedRoll =
       gravity.currentRollAngle * (this.mode === "HYBRID" ? 0.65 : 1);
     this.normal.set(0, 1, 0).applyQuaternion(gravity.currentQuat);
+    const portrait = this.camera.aspect < 0.8,
+      follow = portrait ? 0.84 : 0.67,
+      offset = portrait ? 0.6 : 0.65;
     this.smoothedPos.set(
-      gravity.currentPos2D.x * 0.56 + this.normal.x * 0.75,
-      gravity.currentPos2D.y * 0.56 + this.normal.y * 0.75,
+      gravity.currentPos2D.x * follow + this.normal.x * offset,
+      gravity.currentPos2D.y * follow + this.normal.y * offset,
       7.4,
     );
     this.camera.position.copy(this.smoothedPos);
@@ -35,8 +38,8 @@ export class CameraController {
     );
     this.camera.up.copy(this.currentUp);
     this.camera.lookAt(
-      gravity.currentPos2D.x * 0.5,
-      gravity.currentPos2D.y * 0.5,
+      gravity.currentPos2D.x * (portrait ? 0.77 : 0.62),
+      gravity.currentPos2D.y * (portrait ? 0.77 : 0.62),
       -28,
     );
     this.camera.fov = 64;
@@ -55,9 +58,12 @@ export class CameraController {
     }
     // Follow the current orientation, not the destination wall before takeoff.
     this.normal.set(0, 1, 0).applyQuaternion(gravity.currentQuat);
+    const portrait = this.camera.aspect < 0.8,
+      follow = portrait ? 0.84 : 0.67,
+      offset = portrait ? 0.6 : 0.65;
     this.desired.set(
-      gravity.currentPos2D.x * 0.56 + this.normal.x * 0.75,
-      gravity.currentPos2D.y * 0.56 + this.normal.y * 0.75,
+      gravity.currentPos2D.x * follow + this.normal.x * offset,
+      gravity.currentPos2D.y * follow + this.normal.y * offset,
       7.4,
     );
     this.smoothedPos.lerp(this.desired, 1 - Math.exp(-dt * 8.5));
@@ -84,8 +90,8 @@ export class CameraController {
     );
     this.camera.up.copy(this.currentUp);
     this.camera.lookAt(
-      gravity.currentPos2D.x * 0.5,
-      gravity.currentPos2D.y * 0.5,
+      gravity.currentPos2D.x * (portrait ? 0.77 : 0.62),
+      gravity.currentPos2D.y * (portrait ? 0.77 : 0.62),
       -28,
     );
     const fov = Math.min(82, 64 + Math.max(0, speed - 30) * 0.35);

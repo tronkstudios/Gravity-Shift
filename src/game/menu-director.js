@@ -19,7 +19,7 @@ export class MenuDirector {
         this.dodges++;
       }
     }
-    if (gravity.isTransitioning) return;
+
     const current = gravity.targetSurface.id;
     const danger = world.obstacles.filter(
       (ob) => ob.mesh.position.z < 4 && ob.mesh.position.z > -this.speed * 2.3,
@@ -55,6 +55,7 @@ export class MenuDirector {
     };
     const choice = [...SURFACE_KEYS].sort((a, b) => rank(a) - rank(b))[0];
     if (
+      !gravity.isTransitioning &&
       choice !== current &&
       rank(current) - rank(choice) > 0.45 &&
       this.elapsed - this.lastShift > 0.65 &&

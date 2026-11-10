@@ -11,12 +11,17 @@ export class InputController {
     this.game = game;
   }
   bind() {
+    document.getElementById("btn-watch-replay").onclick = () =>
+      this.game.replay.start();
+    document.getElementById("btn-close-replay").onclick = () =>
+      this.game.replay.stop();
     document.getElementById("btn-cancel-countdown").onclick = () =>
       this.game.state === "RESUMING"
         ? this.game.cancelResume()
         : this.game.returnToMainMenu();
     document.addEventListener("visibilitychange", () => {
       if (document.hidden) {
+        if (this.game.state === "REPLAY") this.game.replay.stop();
         this.swipe?.cancel();
         if (this.game.state === "RESUMING") this.game.cancelResume();
         if (this.game.state === "PLAYING") this.game.pauseGame();
@@ -45,6 +50,10 @@ export class InputController {
       if (e.target?.matches?.("input,select,textarea") || e.repeat) return;
       const code = e.code;
       if (code === "Escape") {
+        if (this.game.state === "REPLAY") {
+          this.game.replay.stop();
+          return;
+        }
         if (this.game.state === "RESUMING") {
           this.game.cancelResume();
           return;

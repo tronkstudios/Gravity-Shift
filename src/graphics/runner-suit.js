@@ -1,3 +1,4 @@
+import { styleForSkin } from "../data/skin-styles.js";
 import * as THREE from "three";
 
 function roundedPlate(w, h, d, r = 0.018) {
@@ -107,7 +108,9 @@ export function addRunnerSuit(rig, skin) {
     frames[name] = group;
     return group;
   };
-  const bulk = heavy ? 1.16 : stealth ? 0.93 : 1;
+  const design = styleForSkin(skin.id);
+  rig.designProfile = design;
+  const bulk = design.bulk;
   const chest = frame("carapace", "torso", "chest");
   const profile = [
     new THREE.Vector2(0.105, 0),
@@ -258,6 +261,65 @@ export function addRunnerSuit(rig, skin) {
       ]);
       badge.scale.z = 0.4;
     }
+  }
+  // Family silhouettes use real, joint-bound geometry; collision dimensions stay universal.
+  for (const side of ["left", "right"]) {
+    for (const part of ["upper-arm", "forearm", "thigh", "shin", "boot"]) {
+      frames[side + "-" + part].scale.set(design.limb, 1, design.limb);
+    }
+    if (celestial) {
+      const pauldron = frames[side + "-upper-arm"].children[0];
+      pauldron.geometry.dispose();
+      pauldron.geometry = new THREE.DodecahedronGeometry(0.092, 0);
+      pauldron.scale.set(1, 0.7, 1.1);
+    }
+    if (heavy) {
+      const bolster = plate(chest, 0.13, 0.085, 0.12, armor, [
+        side === "left" ? -0.18 : 0.18,
+        0.27,
+        0.01,
+      ]);
+      bolster.rotation.z = side === "left" ? -0.12 : 0.12;
+    }
+    if (racer)
+      plate(
+        frames[side + "-boot"],
+        0.12,
+        0.025,
+        0.05,
+        armor,
+        [0, -0.025, 0.105],
+      );
+  }
+  helmet.scale.x = design.helmet;
+  if (stealth) {
+    for (const sign of [-1, 1]) {
+      const tail = plate(chest, 0.11, 0.27, 0.018, trim, [
+        sign * 0.066,
+        -0.08,
+        0.14,
+      ]);
+      tail.rotation.z = sign * 0.05;
+      rig.animExtras.push({
+        update: (t) => {
+          tail.rotation.x = 0.08 + Math.sin(t * 5 + sign) * 0.035;
+        },
+      });
+    }
+  } else if (racer) {
+    plate(helmet, 0.018, 0.052, 0.22, armor, [0, 0.207, 0.025]);
+  } else if (celestial) {
+    const guard = mesh(
+      collar,
+      new THREE.TorusGeometry(0.15, 0.013, 6, 20, Math.PI * 1.5),
+      trim,
+      [0, 0.04, 0.025],
+    );
+    guard.rotation.x = Math.PI / 2;
+    for (const sign of [-1, 1])
+      plate(collar, 0.018, 0.06, 0.03, armor, [sign * 0.12, 0.005, 0.05]);
+  } else if (!heavy) {
+    plate(helmet, 0.012, 0.075, 0.018, trim, [-0.119, 0.18, 0.04]);
   }
   const position = new THREE.Vector3(),
     endPosition = new THREE.Vector3(),

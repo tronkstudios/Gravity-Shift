@@ -94,3 +94,15 @@ La web incluye manifiesto e instalación PWA. Tras preparar la primera carga, co
 Hay pasos y aterrizajes sintetizados, vibración opcional y diagnóstico local exportable. El informe distingue tiempo de envío al renderer de latencia de pantalla; no sustituye una prueba en móvil real. No se transmiten las métricas.
 
 [Compilaciones Android/iOS y publicación pendiente](docs/MOBILE-RELEASE.md). Actions genera APK de depuración y aplicación para simulador iOS. Los anuncios nativos usan IDs de prueba y se activan de forma voluntaria desde Ajustes; no producen ingresos.
+
+## Últimas mejoras de juego
+
+- Última orden de superficie prioritaria y cambio pendiente visible; repetir el destino cancela la orden en cola.
+- Tiempo de simulación consistente entre tasas de fotogramas y pausa automática tras una interrupción de más de un segundo.
+- Colisiones durante la trayectoria de transferencia, con haces de láser y brazos giratorios delimitados.
+- Repetición manual del último segundo tras perder, con obstáculo y contacto resaltados; no cambia las recompensas ni el resultado.
+- Cámara de retrato más centrada en el personaje, panel inferior compacto y avisos con prioridades.
+- Diez secuencias de recorrido, bifurcaciones señalizadas y nuevos objetivos después de los 250 m.
+- Cinco siluetas de traje más diferenciadas, con reglas de colisión iguales para todas.
+
+Las pruebas de navegador usan Chromium y emulación móvil. El rendimiento y tacto definitivos deben comprobarse también con personas en teléfonos físicos.

@@ -357,3 +357,70 @@ test("hangar supports inspecting a chosen character angle", async ({
   await page.locator("#btn-preview-pose").click();
   await screenshot(page, info, "hangar-inspection.png");
 });
+
+test("queued intent can be cancelled and death replay preserves the finished run", async ({
+  page,
+}, info) => {
+  await ready(page);
+  await page.evaluate(() => {
+    const g = window.gravityShiftGame;
+    g.startNewRun({ instant: true });
+    g.world.clearObjects();
+    g.world.nextPatternZ = -10000;
+    g.gravitySys.transitionDuration = 3;
+    g.triggerSurfaceShift("LEFT");
+    g.triggerSurfaceShift("CEILING");
+    g.ui.updateHUD();
+  });
+  await expect(page.locator("#queued-shift")).toContainText("TECHO");
+  await page.evaluate(() => {
+    const g = window.gravityShiftGame;
+    g.triggerSurfaceShift("LEFT");
+    g.ui.updateHUD();
+  });
+  await expect(page.locator("#queued-shift")).toBeHidden();
+  await page.evaluate(() => {
+    const g = window.gravityShiftGame;
+    g.gravitySys.setSurfaceImmediate("FLOOR");
+    g.player.reset();
+    g.cameraCtrl.reset(g.gravitySys);
+  });
+  await page.waitForTimeout(1200);
+  await page.evaluate(() =>
+    window.gravityShiftGame.world.spawnSurfaceObstacle(
+      "FLOOR",
+      -0.4,
+      "BARRIER",
+    ),
+  );
+  await expect(page.locator("#modal-gameover")).toBeVisible();
+  await expect(page.locator("#btn-watch-replay")).toBeVisible();
+  const before = await page.evaluate(() => {
+    const g = window.gravityShiftGame;
+    return {
+      score: g.scoreMgr.score,
+      energy: g.scoreMgr.saveData.totalEnergy,
+      run: g.runId,
+    };
+  });
+  await page.locator("#btn-watch-replay").click();
+  await page.evaluate(() => {
+    const g = window.gravityShiftGame;
+    g.state = "QA_REPLAY_CAPTURE";
+    g.replay.update(g.replay.duration / 0.6);
+  });
+  await expect(page.locator("#replay-overlay")).toBeVisible();
+  await screenshot(page, info, "defeat-replay.png");
+  await page.locator("#btn-close-replay").click();
+  await expect(page.locator("#modal-gameover")).toBeVisible();
+  expect(
+    await page.evaluate(() => {
+      const g = window.gravityShiftGame;
+      return {
+        score: g.scoreMgr.score,
+        energy: g.scoreMgr.saveData.totalEnergy,
+        run: g.runId,
+      };
+    }),
+  ).toEqual(before);
+});

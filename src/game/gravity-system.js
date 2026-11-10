@@ -36,7 +36,9 @@ export class GravitySystem {
 
   shiftTo(surfaceKey) {
     const nextSurf = SURFACES[surfaceKey];
-    if (!nextSurf || nextSurf.id === this.targetSurface.id) {
+    if (!nextSurf) return false;
+    if (nextSurf.id === this.targetSurface.id) {
+      this.pendingSurface = null;
       return false;
     }
 

@@ -74,3 +74,21 @@ En cada paso fijo se detecta un candidato a cambio perfecto y se resuelven las c
 ## Traje del corredor
 
 `graphics/runner-suit.js` construye la carcasa sobre el cuerpo deformable: el tejido usa material mate independiente, las placas tienen cantos redondeados y las piezas largas se orientan entre pares de huesos. Casco y botas tienen marcos específicos para evitar heredar torsiones ajenas a su anatomía. Se mantienen cinco familias de diseño sin duplicar el controlador de movimiento. La posición de contacto se alinea con los planos reales del túnel; una sombra discreta desaparece durante las transferencias. Las capturas de Actions incluyen revisión frontal de las cinco familias y carrera en móvil.
+
+## Entrada, tiempo y colisiones
+
+GravitySystem guarda una única orden pendiente; repetir el destino actual la cancela. El HUD muestra esa intención con un indicador y un contorno discontinuo. La física sigue usando pasos de 1/120 s y consume el tiempo real del fotograma hasta un segundo; una interrupción superior pausa la partida. El cuerpo visual se actualiza una vez por fotograma, mientras la posición física y orientación se actualizan en cada paso.
+
+`game/collision-shapes.js` cruza una cápsula corporal de radio 0,18 m con formas locales de barreras, postes y haces de láser, placas de peligro y brazos giratorios finitos. La orientación proviene del cuaternión actual, también en vuelo. Las skins no cambian esa cápsula. El contacto calculado queda en el obstáculo para la revisión de la derrota.
+
+## Revisión de derrota y avisos
+
+`graphics/run-replay.js` conserva como máximo 40 muestras del último segundo, solo en memoria. Su estado REPLAY interpola las transformaciones registradas y resalta el obstáculo y el contacto. No ejecuta física, recompensas ni finalización. Al terminar o cerrar restaura las transformaciones, visibilidad y estado GAMEOVER. No hay grabación de vídeo ni subida de datos.
+
+`services/notification-queue.js` limita los avisos, agrupa duplicados y permite que desbloqueos o recompensas interrumpan avisos menores. Pausar, morir y reiniciar vacían la cola. La advertencia de peligro continúa siendo independiente.
+
+## Contenido y objetivos posteriores
+
+El catálogo contiene diez secuencias, incluidas secuencias de cuatro pasos, intervalos rítmicos y bifurcaciones posteriores a 300 m con dos salidas señalizadas. Cada salida marcada conserva su ruta de monedas libre de obstáculos en esa fila. El reto inicial sigue siendo 250 m y +75 de energía. Después, `game/run-contracts.js` alterna objetivos relativos de distancia, monedas y cambios perfectos, con dificultad creciente. Solo el modo normal entrega estas recompensas, una vez por objetivo y partida.
+
+`data/skin-styles.js` define cinco familias visuales. Las piezas pesadas, capuchas, faldones, aletas y cuellos facetados se vinculan a los marcos del traje. No alteran velocidad, tamaño de colisión ni economía. El hangar identifica la familia en vez de mostrar recuentos técnicos de mallas.
