@@ -1,3 +1,4 @@
+import { batchTunnelSegments } from "../graphics/tunnel-batching.js";
 import { RUN_PHRASES, zoneForDistance } from "../data/run-content.js";
 import { addTunnelAtmosphere } from "../graphics/tunnel-atmosphere.js";
 import * as THREE from "three";
@@ -27,6 +28,7 @@ export class ProceduralWorld {
     this.initSharedMaterials();
     this.initTunnelPool();
     this.atmosphere = addTunnelAtmosphere(this.scene, this.tunnelSegments);
+    this.tunnelBatching = batchTunnelSegments(this.tunnelSegments);
     this.initSpeedDust();
   }
 

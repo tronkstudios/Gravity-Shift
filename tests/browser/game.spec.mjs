@@ -194,6 +194,7 @@ test("records a transparent software-renderer performance and balance report", a
         ? gl.getParameter(debug.UNMASKED_RENDERER_WEBGL)
         : "unknown",
       measurement: g.metrics.snapshot(),
+      batching: g.world.tunnelBatching,
       pool: {
         coins: g.world.coinPool.length,
         obstacles: Object.fromEntries(
@@ -223,7 +224,7 @@ test("human mesh deforms between run poses", async ({ page }) => {
       if (n.isSkinnedMesh) mesh = n;
     });
     const sample = () => {
-      mesh.updateMatrixWorld(true);
+      rig.model.updateMatrixWorld(true);
       mesh.skeleton.update();
       return Array.from(mesh.skeleton.boneMatrices);
     };

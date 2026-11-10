@@ -130,3 +130,30 @@ test("native test ad cancellation and offline errors grant no rewards", async ()
     assert.equal(b.removed, 3);
   }
 });
+
+test("tunnel batching preserves static geometry bounds and animated panels", async () => {
+  const THREE = await import("three");
+  const { batchTunnelSegments } =
+    await import("../src/graphics/tunnel-batching.js");
+  const mat = new THREE.MeshBasicMaterial(),
+    geo = new THREE.BoxGeometry(1, 2, 3),
+    segment = new THREE.Group();
+  const a = new THREE.Mesh(geo, mat),
+    b = new THREE.Mesh(geo, mat),
+    dynamic = new THREE.Mesh(geo, mat);
+  b.position.x = 4;
+  dynamic.position.y = 4;
+  segment.add(a, b, dynamic);
+  segment.userData.servicePanels = [dynamic];
+  const old = new THREE.Box3().setFromObject(segment);
+  const result = batchTunnelSegments([segment]);
+  const bounds = new THREE.Box3().setFromObject(segment);
+  assert.equal(result.before, 2);
+  assert.equal(result.after, 1);
+  assert.equal(segment.children.length, 2);
+  assert.equal(dynamic.parent, segment);
+  assert.deepEqual(bounds.min.toArray(), old.min.toArray());
+  assert.deepEqual(bounds.max.toArray(), old.max.toArray());
+  dynamic.rotation.z = 0.1;
+  assert.equal(dynamic.rotation.z, 0.1);
+});
