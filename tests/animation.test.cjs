@@ -51,6 +51,7 @@ test("body shader is separate from rigid armor and the first pose already bends 
 });
 test("running joints retain anatomical bend directions and paired limbs alternate", async () => {
   const { rig, motion, THREE } = await runner();
+  const { sampleFoot } = await import("../src/graphics/rig-animator.js");
   const pos = (n) =>
     rig.root.worldToLocal(n.getWorldPosition(new THREE.Vector3()));
   let motionRange = [];
@@ -71,6 +72,12 @@ test("running joints retain anatomical bend directions and paired limbs alternat
         "knee must not hyperextend",
       );
       assert.ok(a.y > -0.1, "ankle cannot pass through the floor");
+      const foot = sampleFoot(i / 24 + (side === "left" ? 0 : 0.5));
+      if (foot.contact)
+        assert.ok(
+          Math.abs(a.y - 0.045) < 0.015,
+          "stance ankle stays at sole height instead of floating",
+        );
     }
     motionRange.push(pos(rig.bones.leftHand).z - pos(rig.bones.rightHand).z);
   }

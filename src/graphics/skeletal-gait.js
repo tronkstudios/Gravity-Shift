@@ -41,6 +41,28 @@ export function applySkeletalGait(
 ) {
   const bones = rig.bones,
     root = rig.root;
+  // Keep a stance foot reachable: lower the pelvis instead of stretching a knee or floating.
+  rig.model.position.y = rig.baseModelY;
+  root.updateMatrixWorld(true);
+  let drop = 0;
+  for (const [side, offset] of [
+    ["left", 0],
+    ["right", 0.5],
+  ]) {
+    const foot = idle
+      ? { z: 0, contact: true }
+      : sampleFoot(phase / (Math.PI * 2) + offset);
+    if (!foot.contact) continue;
+    const h = localPosition(root, bones[`${side}Leg`]),
+      k = localPosition(root, bones[`${side}Knee`]),
+      a = localPosition(root, bones[`${side}Ankle`]);
+    const reach = (h.distanceTo(k) + k.distanceTo(a)) * 0.97;
+    const maxHeight =
+      Math.sqrt(Math.max(0.01, reach * reach - (foot.z * 1.45) ** 2)) + 0.045;
+    drop = Math.max(drop, h.y - maxHeight);
+  }
+  rig.model.position.y -= drop * (1 - airWeight) + landing * 0.045;
+  root.updateMatrixWorld(true);
   aim(
     root,
     bones.torso,
@@ -83,7 +105,7 @@ export function applySkeletalGait(
       : sampleFoot(phase / (Math.PI * 2) + offset);
     const pose = solveLeg(
       foot.z * 1.45,
-      Math.max(0.1, h.y - 0.045 - foot.lift * 1.2 - landing * 0.04),
+      Math.max(0.1, h.y - 0.045 - foot.lift * 1.2),
       upperLength,
       lowerLength,
     );

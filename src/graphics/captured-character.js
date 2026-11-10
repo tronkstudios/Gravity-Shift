@@ -73,6 +73,7 @@ export function buildCapturedCharacter(skin, source = template) {
     materials: { matPrimary: primary, matSecondary: secondary, matGlow: glow },
     sockets: [],
     bones: {},
+    baseModelY: model.position.y,
   };
   const inverseRoot = new THREE.Quaternion(),
     position = new THREE.Vector3(),
