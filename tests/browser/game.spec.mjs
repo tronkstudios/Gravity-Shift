@@ -371,6 +371,7 @@ test("queued intent can be cancelled and death replay preserves the finished run
     g.triggerSurfaceShift("LEFT");
     g.triggerSurfaceShift("CEILING");
     g.ui.updateHUD();
+    g.state = "QA_CAPTURE";
   });
   await expect(page.locator("#queued-shift")).toContainText("TECHO");
   await page.evaluate(() => {
@@ -381,18 +382,31 @@ test("queued intent can be cancelled and death replay preserves the finished run
   await expect(page.locator("#queued-shift")).toBeHidden();
   await page.evaluate(() => {
     const g = window.gravityShiftGame;
-    g.gravitySys.setSurfaceImmediate("FLOOR");
-    g.player.reset();
-    g.cameraCtrl.reset(g.gravitySys);
+    // Advance real physics/collision/replay on a controlled clock. Software
+    // WebGL can stall >2s between assertions and correctly auto-pause the game.
+    // Only skip GPU rendering during this setup; screenshots still use WebGL.
+    const animate = g.animate;
+    const render = g.renderer.render;
+    g.animate = () => {};
+    g.renderer.render = () => {};
+    try {
+      g.gravitySys.setSurfaceImmediate("FLOOR");
+      g.player.reset();
+      g.player.place(g.gravitySys);
+      g.cameraCtrl.reset(g.gravitySys);
+      g.replay.clear();
+      g.fixedAccumulator = 0;
+      g.state = "PLAYING";
+      for (let frame = 0; frame < 72; frame++)
+        animate(g.lastTime + 1000 / 60);
+      g.world.spawnSurfaceObstacle("FLOOR", -0.4, "BARRIER");
+      animate(g.lastTime + 1000 / 60);
+    } finally {
+      g.renderer.render = render;
+      g.animate = animate;
+      g.lastTime = performance.now();
+    }
   });
-  await page.waitForTimeout(1200);
-  await page.evaluate(() =>
-    window.gravityShiftGame.world.spawnSurfaceObstacle(
-      "FLOOR",
-      -0.4,
-      "BARRIER",
-    ),
-  );
   await expect(page.locator("#modal-gameover")).toBeVisible();
   await expect(page.locator("#btn-watch-replay")).toBeVisible();
   const before = await page.evaluate(() => {
