@@ -1088,3 +1088,49 @@ body:has(#practice-panel:not(.hidden)) #danger-cue {
   overflow-y: auto;
   touch-action: pan-y;
 }
+
+/* Keep the portrait HUD compact so the tunnel remains readable. */
+@media (max-width: 640px) {
+  #screen-hud > div:first-child {
+    display: grid;
+    grid-template-columns: minmax(92px, 1fr) 42px minmax(136px, 1.2fr);
+    gap: 8px;
+  }
+  .hud-score-card {
+    min-width: 0 !important;
+    padding: 7px 9px;
+  }
+  .hud-compass {
+    padding: 6px;
+    justify-content: center;
+  }
+  .hud-compass > div:first-child {
+    width: 28px;
+    height: 28px;
+  }
+  .hud-telemetry {
+    gap: 5px;
+    justify-content: flex-end;
+  }
+  .hud-telemetry > div {
+    padding: 6px 7px;
+    min-width: 0;
+  }
+  .hud-telemetry > div > div:first-child {
+    display: none;
+  }
+  .hud-telemetry > div > div:nth-child(2) {
+    white-space: nowrap;
+    font-size: 12px;
+  }
+  #hud-speed {
+    display: block;
+    font-size: 9px;
+    margin: 0;
+  }
+  #btn-pause-game {
+    width: 36px;
+    height: 42px;
+    flex-shrink: 0;
+  }
+}

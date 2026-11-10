@@ -35,7 +35,7 @@ async function freezeMenu(page) {
     stage.gravity.setSurfaceImmediate("FLOOR");
     stage.player.reset();
     stage.player.elapsed = 0;
-    stage.player.update(0, 22, stage.gravity, true);
+    stage.player.update(0.25, 22, stage.gravity, true);
     stage.cameraController.reset(stage.gravity);
     stage.world.rng.setSeed("VISUAL");
     stage.world.resetWorld();
@@ -57,7 +57,7 @@ async function freezeRun(page, surface = "FLOOR") {
     game.gravitySys.setSurfaceImmediate(surface);
     game.player.reset();
     game.player.elapsed = 0;
-    game.player.update(0, 30, game.gravitySys, false);
+    game.player.update(0.25, 30, game.gravitySys, false);
     game.cameraCtrl.reset(game.gravitySys);
     game.ui.updateHUD();
     game.state = "QA_CAPTURE";
@@ -100,6 +100,11 @@ test("runner stays inside the view on floor and ceiling and captured skeletons a
   await ready(page);
   await freezeRun(page);
   await screenshot(page, info, "floor.png");
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth + 1,
+    ),
+  ).toBe(true);
   for (const surface of ["FLOOR", "CEILING", "LEFT", "RIGHT"]) {
     await freezeRun(page, surface);
     const projection = await page.evaluate(() => {
