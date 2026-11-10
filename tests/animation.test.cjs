@@ -153,3 +153,36 @@ test("fitted suit stays on its anatomical frames for all sixteen skins and orien
   }
   assert.equal(families.size, 5);
 });
+
+test("the legacy head and extremities are absent from the drawn base mesh", async () => {
+  const { rig, THREE } = await runner();
+  let mesh;
+  rig.model.traverse((n) => {
+    if (n.isSkinnedMesh) mesh = n;
+  });
+  assert.ok(mesh.userData.suitTrim.removedTriangles > 100);
+  rig.root.updateMatrixWorld(true);
+  mesh.skeleton.update();
+  const bounds = new THREE.Box3();
+  for (const vertex of new Set(mesh.geometry.index.array)) {
+    const point = new THREE.Vector3().fromBufferAttribute(
+      mesh.geometry.attributes.position,
+      vertex,
+    );
+    mesh.boneTransform(vertex, point);
+    point.applyMatrix4(mesh.matrixWorld);
+    rig.root.worldToLocal(point);
+    bounds.expandByPoint(point);
+  }
+  const head = rig.root.worldToLocal(
+    rig.bones.head.getWorldPosition(new THREE.Vector3()),
+  );
+  assert.ok(
+    bounds.max.y < head.y + 0.04,
+    "the old oversized head must not protrude behind the replacement helmet",
+  );
+  assert.ok(
+    bounds.max.y > head.y - 0.15,
+    "keep the neck so the helmet joins the suit",
+  );
+});

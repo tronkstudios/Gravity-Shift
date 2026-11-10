@@ -2,6 +2,7 @@ import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { SkeletonUtils } from "three/examples/jsm/utils/SkeletonUtils.js";
 import { applySkeletalGait } from "./skeletal-gait.js";
+import { trimSuitBase } from "./suit-base-mesh.js";
 import { addRunnerSuit } from "./runner-suit.js";
 let template = null;
 export async function loadCapturedCharacter() {
@@ -63,6 +64,7 @@ export function buildCapturedCharacter(skin, source = template) {
   model.traverse((node) => {
     if (node.isMesh) {
       node.geometry = node.geometry.clone();
+      if (node.isSkinnedMesh) node.userData.suitTrim = trimSuitBase(node);
       node.material = node.isSkinnedMesh ? bodyMaterial : primary;
       node.frustumCulled = false;
     }

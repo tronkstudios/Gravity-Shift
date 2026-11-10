@@ -14,7 +14,7 @@ export class HangarPreviewStudio {
     this.previewRig = null;
     this.isActive = false;
     this.poseMode = "RUN";
-    this.userYaw = 0.35;
+    this.userYaw = Math.PI - 0.35;
     this.isDragging = false;
     this.userControlled = false;
     this.lastMouseX = 0;

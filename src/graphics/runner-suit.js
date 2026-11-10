@@ -114,7 +114,8 @@ export function addRunnerSuit(rig, skin) {
     new THREE.Vector2(0.12, 0.055),
     new THREE.Vector2(0.166 * bulk, 0.225),
     new THREE.Vector2(0.155 * bulk, 0.285),
-    new THREE.Vector2(0.115, 0.315),
+    new THREE.Vector2(0.14, 0.33),
+    new THREE.Vector2(0.1, 0.36),
   ];
   const shell = mesh(
     chest,
@@ -122,14 +123,14 @@ export function addRunnerSuit(rig, skin) {
     armor,
     [0, 0.008, 0],
   );
-  shell.scale.z = 0.69;
+  shell.scale.z = 0.86;
   // Front has a sternum inset; back has a compact spine battery, rather than floating slabs.
-  plate(chest, 0.13, 0.16, 0.023, trim, [0, 0.19, -0.118]);
-  plate(chest, 0.014, 0.09, 0.009, light, [0, 0.19, -0.135]);
-  plate(chest, 0.12, 0.205, 0.045, trim, [0, 0.165, 0.11]);
+  plate(chest, 0.13, 0.16, 0.023, trim, [0, 0.19, -0.155]);
+  plate(chest, 0.014, 0.09, 0.009, light, [0, 0.19, -0.173]);
+  plate(chest, 0.12, 0.205, 0.045, trim, [0, 0.165, 0.145]);
   for (const sign of [-1, 1]) {
-    plate(chest, 0.028, 0.15, 0.016, armor, [sign * 0.078, 0.165, 0.12]);
-    plate(chest, 0.009, 0.065, 0.007, light, [sign * 0.078, 0.19, 0.133]);
+    plate(chest, 0.028, 0.15, 0.016, armor, [sign * 0.078, 0.165, 0.151]);
+    plate(chest, 0.009, 0.065, 0.007, light, [sign * 0.078, 0.19, 0.165]);
   }
   const belt = mesh(
     chest,
