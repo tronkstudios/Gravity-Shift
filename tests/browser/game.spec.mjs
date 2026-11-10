@@ -514,6 +514,8 @@ test("rare runner evades an obstacle and catching it permanently unlocks the out
     g.world.clearObjects();
     r.z = -3;
     r.gravity.setSurfaceImmediate("FLOOR");
+    r.gravity.targetLateralOffset = r.lane;
+    r.gravity.update(0.2);
     g.rivals.render(0.1);
     g.ui.updateHUD();
   });

@@ -1299,6 +1299,7 @@ test("rare runners travel slower and evade a real generated route without collid
     game.rivals.tick(1 / 120);
     const rival = game.rivals.active;
     assert.ok(rival);
+    assert.ok(rival.player.root.position.toArray().every(Number.isFinite));
     assert.equal(
       game.rivals.contacts(
         rival.player.root.position,
@@ -1333,6 +1334,7 @@ test("rare runner anticipates late-game rows rather than teleporting out of haza
     game.rivals.tick(1 / 120);
     const rival = game.rivals.active;
     assert.ok(rival);
+    assert.ok(rival.player.root.position.toArray().every(Number.isFinite));
     assert.equal(
       game.rivals.contacts(
         rival.player.root.position,

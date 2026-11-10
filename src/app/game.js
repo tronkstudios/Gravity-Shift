@@ -204,6 +204,7 @@ export class GravityShiftGame {
     this.currentSpeed = mode === "practice" ? 14 : this.baseSpeed;
     this.gravitySys.setSurfaceImmediate("FLOOR");
     this.player.reset();
+    this.player.place(this.gravitySys);
     this.cameraCtrl.reset(this.gravitySys);
     this.world.resetWorld();
     this.zoneController.update(100, 0);

@@ -29,13 +29,20 @@ export class RareRunners {
     player.setParticleBudget(12);
     const gravity = new GravitySystem();
     gravity.transitionDuration = 0.16;
+    const lane = (skin.id.length % 2 ? 1 : -1) * 1.15;
+    gravity.targetLateralOffset = lane;
+    gravity.update(1);
+    player.place(gravity);
+    player.root.position.z = -48;
+    player.suitLight.color.setHex(0xffd16a);
+    player.suitLight.intensity = 0.85;
     const beacon = new THREE.Mesh(
       new THREE.TorusGeometry(0.3, 0.025, 6, 20),
       new THREE.MeshBasicMaterial({ color: 0xffd16a }),
     );
     beacon.position.y = 1.95;
     player.visualGroup.add(beacon);
-    this.active = { player, gravity, skin, z: -48, emergencyDodges: 0 };
+    this.active = { player, gravity, skin, lane, z: -48, emergencyDodges: 0 };
     this.seen = true;
     g.ui.showToast(
       "CORREDOR RARO · ALCANZA A " + skin.name + " PARA CONSEGUIR SU TRAJE",
@@ -110,6 +117,8 @@ export class RareRunners {
       rank(rival.gravity.targetSurface.id) > 0
     )
       rival.gravity.shiftTo(best);
+    if (!rival.gravity.isTransitioning)
+      rival.gravity.targetLateralOffset = rival.lane;
     rival.gravity.update(dt);
     rival.z += (g.currentSpeed - speed) * dt;
     rival.player.place(rival.gravity);
