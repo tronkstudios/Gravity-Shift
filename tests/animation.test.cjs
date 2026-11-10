@@ -75,7 +75,7 @@ test("running joints retain anatomical bend directions and paired limbs alternat
       const foot = sampleFoot(i / 24 + (side === "left" ? 0 : 0.5));
       if (foot.contact)
         assert.ok(
-          Math.abs(a.y - 0.045) < 0.015,
+          Math.abs(a.y - 0.095) < 0.015,
           "stance ankle stays at sole height instead of floating",
         );
     }

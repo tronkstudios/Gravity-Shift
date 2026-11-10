@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import { sampleFoot, solveLeg } from "./rig-animator.js";
 
+const SOLE_HEIGHT = 0.095;
 const UP = new THREE.Vector3(0, 1, 0);
 /** Aim an imported bone in runner-local coordinates, preserving its existing twist. */
 function aim(root, bone, child, direction) {
@@ -58,7 +59,8 @@ export function applySkeletalGait(
       a = localPosition(root, bones[`${side}Ankle`]);
     const reach = (h.distanceTo(k) + k.distanceTo(a)) * 0.97;
     const maxHeight =
-      Math.sqrt(Math.max(0.01, reach * reach - (foot.z * 1.45) ** 2)) + 0.045;
+      Math.sqrt(Math.max(0.01, reach * reach - (foot.z * 1.45) ** 2)) +
+      SOLE_HEIGHT;
     drop = Math.max(drop, h.y - maxHeight);
   }
   rig.model.position.y -= drop * (1 - airWeight) + landing * 0.045;
@@ -105,7 +107,7 @@ export function applySkeletalGait(
       : sampleFoot(phase / (Math.PI * 2) + offset);
     const pose = solveLeg(
       foot.z * 1.45,
-      Math.max(0.1, h.y - 0.045 - foot.lift * 1.2),
+      Math.max(0.1, h.y - SOLE_HEIGHT - foot.lift * 1.2),
       upperLength,
       lowerLength,
     );
@@ -121,7 +123,7 @@ export function applySkeletalGait(
     );
     aim(root, hip, knee, down(hipAngle));
     aim(root, knee, ankle, down(hipAngle + kneeAngle));
-    aim(root, ankle, toe, new THREE.Vector3(0, -0.08, -1));
+    aim(root, ankle, toe, new THREE.Vector3(0, -0.9, -0.43));
   }
   rig.updateSockets();
 }
