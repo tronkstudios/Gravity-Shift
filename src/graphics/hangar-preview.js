@@ -16,6 +16,7 @@ export class HangarPreviewStudio {
     this.poseMode = "RUN";
     this.userYaw = 0.35;
     this.isDragging = false;
+    this.userControlled = false;
     this.lastMouseX = 0;
     this.animTime = 0;
 
@@ -34,8 +35,8 @@ export class HangarPreviewStudio {
 
     this.scene = new THREE.Scene();
     this.camera = new THREE.PerspectiveCamera(42, 1, 0.1, 30);
-    this.camera.position.set(0, 1.25, 3.55);
-    this.camera.lookAt(0, 0.98, 0);
+    this.camera.position.set(0, 1.0, 2.8);
+    this.camera.lookAt(0, 0.78, 0);
 
     const amb = new THREE.AmbientLight(0x99bbdd, 0.85);
     this.scene.add(amb);
@@ -76,6 +77,7 @@ export class HangarPreviewStudio {
     if (!this.viewport) return;
     const startDrag = (clientX) => {
       this.isDragging = true;
+      this.userControlled = true;
       this.lastMouseX = clientX;
     };
     const moveDrag = (clientX) => {
@@ -142,8 +144,8 @@ export class HangarPreviewStudio {
     if (!this.isActive || !this.renderer || !this.previewRig) return;
 
     this.animTime += dt;
-    if (!this.isDragging) {
-      this.userYaw += dt * 0.65;
+    if (!this.isDragging && !this.userControlled) {
+      this.userYaw += dt * 0.18;
     }
     this.pedestalGroup.rotation.y = this.userYaw;
 

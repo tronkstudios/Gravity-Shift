@@ -330,3 +330,30 @@ test("character art review across five suit silhouettes", async ({
     await screenshot(page, info, "design-" + skin + ".png");
   }
 });
+
+test("hangar supports inspecting a chosen character angle", async ({
+  page,
+}, info) => {
+  test.skip(
+    info.project.name !== "desktop",
+    "Art inspection uses the desktop hangar.",
+  );
+  await ready(page);
+  await page.locator("#btn-open-shop").click();
+  await expect(page.locator("#modal-shop")).toBeVisible();
+  const viewport = page.locator("#hangar-preview-viewport");
+  const box = await viewport.boundingBox();
+  await page.mouse.move(box.x + box.width * 0.4, box.y + box.height * 0.5);
+  await page.mouse.down();
+  await page.mouse.move(box.x + box.width * 0.6, box.y + box.height * 0.5);
+  await page.mouse.up();
+  const angle = await page.evaluate(
+    () => window.gravityShiftGame.hangarStudio.userYaw,
+  );
+  await page.waitForTimeout(300);
+  expect(
+    await page.evaluate(() => window.gravityShiftGame.hangarStudio.userYaw),
+  ).toBeCloseTo(angle, 5);
+  await page.locator("#btn-preview-pose").click();
+  await screenshot(page, info, "hangar-inspection.png");
+});
