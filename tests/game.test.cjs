@@ -1131,7 +1131,7 @@ test("run time and distance agree at 60 and 10 FPS, while a long stall pauses sa
   assert.ok(Math.abs(smooth.scoreMgr.distance - slow.scoreMgr.distance) < 0.2);
   assert.ok(slow.scoreMgr.elapsed > 0.99);
   const before = slow.scoreMgr.distance;
-  slow.animate(slow.lastTime + 1500);
+  slow.animate(slow.lastTime + 2500);
   assert.equal(slow.state, "PAUSED");
   assert.equal(slow.scoreMgr.distance, before);
 });
@@ -1344,4 +1344,19 @@ test("rare runner anticipates late-game rows rather than teleporting out of haza
   }
   assert.equal(game.rivals.active.emergencyDodges, 0);
   game.rivals.despawn();
+});
+
+test("replay shows an obstacle created immediately before the fatal sample", () => {
+  const { game } = visualGame();
+  game.world.clearObjects();
+  game.world.nextPatternZ = -10000;
+  for (let i = 0; i < 4; i++) game.animate(game.lastTime + 50);
+  game.world.spawnSurfaceObstacle("FLOOR", 0, "BARRIER");
+  const ob = game.world.obstacles[0];
+  game.lastDeath = ob;
+  game.handleGameOver();
+  assert.ok(game.replay.start());
+  game.replay.update(game.replay.duration / 0.6);
+  assert.equal(ob.mesh.visible, true);
+  game.replay.stop();
 });

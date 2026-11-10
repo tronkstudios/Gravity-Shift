@@ -27,6 +27,7 @@ export class RunReplay {
         .filter((o) => Math.abs(o.mesh.position.z) < 70)
         .map((o) => o.mesh),
     ];
+    if (force && this.frames.at(-1)?.time === time) this.frames.pop();
     this.frames.push({
       time,
       position: g.player.root.position.clone(),
@@ -113,17 +114,18 @@ export class RunReplay {
     const b = this.frames[index],
       a = this.frames[Math.max(0, index - 1)],
       t = b.time > a.time ? (time - a.time) / (b.time - a.time) : 0;
-    const end = new Map(b.objects.map((object) => [object.mesh, object]));
+    const before = new Map(a.objects.map((object) => [object.mesh, object])),
+      after = new Map(b.objects.map((object) => [object.mesh, object]));
     for (const { mesh } of this.restore) mesh.visible = false;
-    for (const object of a.objects) {
-      const next = end.get(object.mesh) || object;
-      object.mesh.visible = true;
-      object.mesh.position.lerpVectors(object.position, next.position, t);
-      object.mesh.quaternion.slerpQuaternions(
-        object.quaternion,
-        next.quaternion,
-        t,
-      );
+    for (const mesh of new Set([...before.keys(), ...after.keys()])) {
+      const first = before.get(mesh),
+        last = after.get(mesh);
+      if ((!first && t < 0.5) || (!last && t > 0.5)) continue;
+      const from = first || last,
+        to = last || first;
+      mesh.visible = true;
+      mesh.position.lerpVectors(from.position, to.position, t);
+      mesh.quaternion.slerpQuaternions(from.quaternion, to.quaternion, t);
     }
     g.player.root.position.lerpVectors(a.position, b.position, t);
     g.player.root.quaternion.slerpQuaternions(a.quaternion, b.quaternion, t);

@@ -59,6 +59,7 @@ export class GravityShiftGame {
     this.initThreeScene();
     this.gravitySys = new GravitySystem();
     this.player = new Player(this.scene);
+    this.player.physicsClocked = true;
     this.cameraCtrl = new CameraController(this.camera);
     this.world = new ProceduralWorld(this.scene, this.rng);
     this.menuStage = new MenuStage();
@@ -168,6 +169,7 @@ export class GravityShiftGame {
       throw new Error("Modo inválido");
     if (mode === "daily" && !validChallengeDate(challengeDate))
       throw new Error("Fecha de reto inválida");
+    this.lastTime = performance.now();
     this.replay?.clear();
     this.items?.reset();
     this.rivals?.reset();
@@ -439,11 +441,11 @@ export class GravityShiftGame {
     if (this.state === "PLAYING" || this.state === "MENU")
       this.quality?.update(frameSeconds);
     // Preserve elapsed simulation time down to 1 FPS; pause genuinely long stalls.
-    if (frameSeconds > 1 && this.state === "PLAYING") {
+    if (frameSeconds > 2 && this.state === "PLAYING") {
       this.pauseGame();
       this.ui.showToast("PAUSA AUTOMÁTICA · EL JUEGO DEJÓ DE RESPONDER", 3);
     }
-    const dt = frameSeconds > 1 ? 0 : frameSeconds;
+    const dt = frameSeconds > 2 ? 0 : frameSeconds;
     this.lastTime = now;
 
     if (this.hangarStudio && this.hangarStudio.isActive) {
@@ -518,7 +520,7 @@ export class GravityShiftGame {
           }
         }
         this.items?.tick(step);
-        this.player.advancePhysics?.(step);
+        this.player.advancePhysics?.(step, this.currentSpeed, this.gravitySys);
         this.player.root.position.set(
           this.gravitySys.currentPos2D.x,
           this.gravitySys.currentPos2D.y,
@@ -550,6 +552,7 @@ export class GravityShiftGame {
           (type) => this.items?.collect(type),
         );
         this.rivals?.tick(step);
+        if (this.state === "PLAYING") this.replay?.capture();
         if (
           perfectShift &&
           this.state === "PLAYING" &&

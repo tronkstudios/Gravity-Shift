@@ -77,7 +77,7 @@ En cada paso fijo se detecta un candidato a cambio perfecto y se resuelven las c
 
 ## Entrada, tiempo y colisiones
 
-GravitySystem guarda una única orden pendiente; repetir el destino actual la cancela. El HUD muestra esa intención con un indicador y un contorno discontinuo. La física sigue usando pasos de 1/120 s y consume el tiempo real del fotograma hasta un segundo; una interrupción superior pausa la partida. El cuerpo visual se actualiza una vez por fotograma, mientras la posición física y orientación se actualizan en cada paso.
+GravitySystem guarda una única orden pendiente; repetir el destino actual la cancela. El HUD muestra esa intención con un indicador y un contorno discontinuo. La física sigue usando pasos de 1/120 s y consume el tiempo real del fotograma hasta dos segundos; una interrupción superior pausa la partida. El cuerpo visual se actualiza una vez por fotograma, mientras la posición física y orientación se actualizan en cada paso.
 
 `game/collision-shapes.js` cruza una cápsula corporal de radio 0,18 m con formas locales de barreras, postes y haces de láser, placas de peligro y brazos giratorios finitos. La orientación proviene del cuaternión actual, también en vuelo. Las skins no cambian esa cápsula. El contacto calculado queda en el obstáculo para la revisión de la derrota.
 

@@ -98,7 +98,7 @@ Hay pasos y aterrizajes sintetizados, vibración opcional y diagnóstico local e
 ## Últimas mejoras de juego
 
 - Última orden de superficie prioritaria y cambio pendiente visible; repetir el destino cancela la orden en cola.
-- Tiempo de simulación consistente entre tasas de fotogramas y pausa automática tras una interrupción de más de un segundo.
+- Tiempo de simulación consistente entre tasas de fotogramas y pausa automática tras una interrupción de más de dos segundos.
 - Colisiones durante la trayectoria de transferencia, con haces de láser y brazos giratorios delimitados.
 - Repetición manual del último segundo tras perder, con obstáculo y contacto resaltados; no cambia las recompensas ni el resultado.
 - Cámara de retrato más centrada en el personaje, panel inferior compacto y avisos con prioridades.

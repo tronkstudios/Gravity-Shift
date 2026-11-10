@@ -195,16 +195,17 @@ export class Player {
       );
     this.root.quaternion.copy(gravitySys.currentQuat);
   }
-  advancePhysics(dt) {
+  advancePhysics(dt, speed, gravity) {
     this.shieldTimer = Math.max(0, this.shieldTimer - dt);
-    this.physicsTicked = true;
+    if (!this.isDead && !gravity.isTransitioning && !this.jumpActive)
+      this.runCycleTime +=
+        dt * Math.PI * 2 * Math.min(2.15, 1.35 + speed * 0.018);
   }
   update(dt, speed, gravitySys, isMenuShowcase = false) {
     this.contactShadow.visible =
       !gravitySys.isTransitioning && !this.jumpActive;
-    if (!this.physicsTicked)
+    if (!this.physicsClocked)
       this.shieldTimer = Math.max(0, this.shieldTimer - dt);
-    this.physicsTicked = false;
     this.shieldMesh.visible = this.shieldTimer > 0;
     if (this.shieldTimer > 0) {
       this.shieldMesh.rotation.y += dt * 4;
@@ -277,7 +278,7 @@ export class Player {
           : 0,
         follow,
       );
-      if (!airborne)
+      if (!airborne && !this.physicsClocked)
         this.runCycleTime +=
           dt * Math.PI * 2 * Math.min(2.15, 1.35 + speed * 0.018);
     }
