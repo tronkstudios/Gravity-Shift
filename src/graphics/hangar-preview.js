@@ -157,9 +157,10 @@ export class HangarPreviewStudio {
       this.capturedMotion.update(
         this.previewRig,
         this.poseMode === "RUN" ? dt : 0,
-        0,
+        this.animTime * Math.PI * 2 * 1.7,
         false,
         0,
+        this.poseMode !== "RUN",
       );
     } else if (this.poseMode === "RUN") {
       const t = this.animTime * 7.5;

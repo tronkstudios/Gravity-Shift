@@ -245,3 +245,53 @@ test("human mesh deforms between run poses", async ({ page }) => {
   expect(result.skinning).toBe(true);
   expect(result.change).toBeGreaterThan(1);
 });
+
+// Verify the shader actually used by WebGL, not just a material flag or moving bones.
+test("deforming body shader and anatomical poses render in the menu and race", async ({
+  page,
+}, info) => {
+  await ready(page);
+  await freezeRun(page);
+  const shader = await page.evaluate(() => {
+    const g = window.gravityShiftGame;
+    g.renderer.render(g.scene, g.camera);
+    let mesh;
+    g.player.currentRig.model.traverse((n) => {
+      if (n.isSkinnedMesh) mesh = n;
+    });
+    const gl = g.renderer.getContext();
+    const program = g.renderer.properties.get(mesh.material).currentProgram;
+    return {
+      source: gl.getShaderSource(program.vertexShader),
+      separate: !g.player.currentRig.sockets.some(({ socket }) => {
+        let shares = false;
+        socket.traverse((n) => {
+          if (n.material === mesh.material) shares = true;
+        });
+        return shares;
+      }),
+    };
+  });
+  expect(shader.source).toContain("#define USE_SKINNING");
+  expect(shader.separate).toBe(true);
+  for (const [name, phase, air] of [
+    ["contact", 0, false],
+    ["stride", Math.PI / 2, false],
+    ["transfer", Math.PI / 2, true],
+  ]) {
+    await page.evaluate(
+      ({ phase, air }) => {
+        const g = window.gravityShiftGame;
+        g.player.rigAnimator.update(g.player.currentRig, 0.1, phase, air, 0.5);
+        g.camera.position.set(2.5, -4.9, 3.3);
+        g.camera.up.set(0, 1, 0);
+        g.camera.lookAt(0, -5.2, 0);
+        g.camera.fov = 40;
+        g.camera.updateProjectionMatrix();
+        document.getElementById("screen-hud").style.visibility = "hidden";
+      },
+      { phase, air },
+    );
+    await screenshot(page, info, "runner-" + name + ".png");
+  }
+});

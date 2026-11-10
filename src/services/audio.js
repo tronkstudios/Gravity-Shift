@@ -103,7 +103,7 @@ export class AudioManager {
     const phase = player.currentRig?.captured
       ? player.rigAnimator.phase || 0
       : (player.runCycleTime / (Math.PI * 2)) % 1;
-    const marker = Math.floor(phase * (player.currentRig?.captured ? 4 : 2));
+    const marker = Math.floor(phase * 2);
     if (
       this.lastFootMarker !== null &&
       this.lastFootMarker !== undefined &&

@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { SkeletonUtils } from "three/examples/jsm/utils/SkeletonUtils.js";
+import { applySkeletalGait } from "./skeletal-gait.js";
 import { addArmorDetails } from "./armor-details.js";
 let template = null;
 export async function loadCapturedCharacter() {
@@ -27,10 +28,10 @@ const names = {
   leftAnkle: "leg_joint_L_3",
   rightAnkle: "leg_joint_R_3",
 };
-export function buildCapturedCharacter(skin) {
-  if (!template) return null;
+export function buildCapturedCharacter(skin, source = template) {
+  if (!source) return null;
   const root = new THREE.Group(),
-    model = SkeletonUtils.clone(template.scene);
+    model = SkeletonUtils.clone(source.scene);
   root.add(model);
   model.rotation.y = Math.PI;
   model.updateMatrixWorld(true);
@@ -40,10 +41,13 @@ export function buildCapturedCharacter(skin) {
   model.position.y -= bounds.min.y * scale;
   const primary = new THREE.MeshStandardMaterial({
     color: skin.primaryColor,
-    skinning: true,
     metalness: Math.min(0.55, skin.metalness),
     roughness: Math.max(0.42, skin.roughness),
   });
+  // r128 caches shader variants per material: rigid armor must never share the skinned material.
+  const bodyMaterial = primary.clone();
+  bodyMaterial.skinning = true;
+  bodyMaterial.name = "deforming-runner-body";
   const secondary = new THREE.MeshStandardMaterial({
     color: skin.secondaryColor,
     metalness: 0.3,
@@ -54,7 +58,7 @@ export function buildCapturedCharacter(skin) {
   model.traverse((node) => {
     if (node.isMesh) {
       node.geometry = node.geometry.clone();
-      node.material = primary;
+      node.material = node.isSkinnedMesh ? bodyMaterial : primary;
       node.frustumCulled = false;
     }
   });
@@ -63,11 +67,12 @@ export function buildCapturedCharacter(skin) {
     root,
     model,
     captured: true,
-    clips: template.animations,
+    clips: source.animations,
     animExtras: [],
     joints: {},
     materials: { matPrimary: primary, matSecondary: secondary, matGlow: glow },
     sockets: [],
+    bones: {},
   };
   const inverseRoot = new THREE.Quaternion(),
     position = new THREE.Vector3(),
@@ -75,6 +80,7 @@ export function buildCapturedCharacter(skin) {
   for (const [key, boneName] of Object.entries(names)) {
     const bone = model.getObjectByName(boneName);
     if (!bone) throw new Error("Articulación ausente: " + boneName);
+    rig.bones[key] = bone;
     const socket = new THREE.Group();
     root.add(socket);
     bone.getWorldQuaternion(orientation);
@@ -89,6 +95,15 @@ export function buildCapturedCharacter(skin) {
       rig[key] = socket;
     else rig.joints[key] = socket;
   }
+  for (const [key, name] of Object.entries({
+    chest: "torso_joint_3",
+    neck: "Skeleton_neck_joint_1",
+    leftHand: "Skeleton_arm_joint_L__2_",
+    rightHand: "Skeleton_arm_joint_R__3_",
+    leftToe: "leg_joint_L_5",
+    rightToe: "leg_joint_R_5",
+  }))
+    rig.bones[key] = model.getObjectByName(name);
   rig.leftLeg.userData.joint = rig.joints.leftKnee;
   rig.rightLeg.userData.joint = rig.joints.rightKnee;
   rig.leftArm.userData.joint = rig.joints.leftElbow;
@@ -131,16 +146,17 @@ export class CapturedMotionController {
     this.rig = rig;
     this.mixer = new THREE.AnimationMixer(rig.model);
     this.run = this.mixer.clipAction(rig.clips[0]).play();
-    this.airWeight = 0;
-    this.wasAirborne = false;
-    this.phase = 0;
+    this.reset();
   }
   reset() {
+    this.airWeight = 0;
+    this.wasAirborne = false;
+    this.landing = 0;
+    this.phase = 0;
     if (this.run) {
       this.run.reset().play();
-      this.phase = 0;
+      this.update(this.rig, 0, 0, false, 0);
     }
-    this.airWeight = 0;
   }
   dispose() {
     if (this.mixer) {
@@ -149,16 +165,21 @@ export class CapturedMotionController {
       this.mixer = null;
     }
   }
-  update(rig, dt, phase, airborne, progress) {
+  update(rig, dt, phase, airborne, progress, idle = false) {
     if (!this.mixer) this.bind(rig);
+    if (this.wasAirborne && !airborne) this.landing = 1;
+    this.wasAirborne = airborne;
+    this.landing *= Math.exp(-dt * 12);
     this.airWeight = THREE.MathUtils.lerp(
       this.airWeight,
       airborne ? 1 : 0,
-      1 - Math.exp(-dt * 18),
+      1 - Math.exp(-dt * 22),
     );
-    this.run.setEffectiveTimeScale(airborne ? 0.22 : 1.1);
-    this.mixer.update(dt);
-    rig.updateSockets();
-    this.phase = this.run.time / this.run.getClip().duration;
+    // Match the same gait clock as the player, including speed and paused transfers.
+    this.mixer.setTime(
+      idle ? 0.25 : (phase / (Math.PI * 2)) * this.run.getClip().duration,
+    );
+    applySkeletalGait(rig, phase, this.airWeight, progress, this.landing, idle);
+    this.phase = (((phase / (Math.PI * 2)) % 1) + 1) % 1;
   }
 }

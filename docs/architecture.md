@@ -65,7 +65,7 @@ En cada paso fijo se detecta un candidato a cambio perfecto y se resuelven las c
 
 ## Plataformas y recursos instalables
 
-`graphics/captured-character.js` carga el GLB licenciado, clona su esqueleto y geometría por personaje, vincula accesorios a huesos y administra AnimationMixer. El material debe activar `skinning` por usar Three r128. `human-motion.js` queda como reserva ante un fallo del recurso.
+`graphics/captured-character.js` carga el GLB licenciado, clona su esqueleto y geometría por personaje, vincula accesorios a huesos y administra AnimationMixer. El cuerpo usa un material exclusivo con `skinning`; compartirlo con accesorios rígidos en Three r128 puede reutilizar el shader sin deformación y dejar la malla en T-pose. `skeletal-gait.js` orienta los huesos del modelo, conserva la torsión, resuelve el apoyo de piernas con dos segmentos y mezcla flexión de brazos, recogida aérea y amortiguación. Los sockets solo siguen el resultado, no sustituyen la animación del esqueleto. `human-motion.js` queda como reserva ante un fallo del recurso.
 
 `platform/install.js` administra instalación, estado offline y actualización voluntaria. El build genera un service worker con versión por hash de contenido. `native/admob-provider.js` es la frontera con el SDK opcional de prueba; el juego no depende directamente de eventos nativos. `services/haptic-feedback.js` abstrae vibración web/nativa. `services/playtest-metrics.js` mantiene mediciones locales acotadas y exportación sin red.
 

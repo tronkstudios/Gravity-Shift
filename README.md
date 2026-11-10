@@ -35,7 +35,7 @@ Cada sector cambia la iluminación progresivamente y tiene su línea musical. El
 
 ## Personajes y movimiento
 
-Las 16 skins conservan materiales y detalles propios sobre una malla humana articulada. El corredor usa el modelo y clip animado CesiumMan (Cesium, CC BY 4.0), con textura reemplazada, esqueletos independientes y accesorios que siguen sus huesos. Si el recurso falla se usa el rig procedural de reserva. No se afirma que el clip sea captura de movimiento. [Créditos](public/assets/characters/ATTRIBUTION.md).
+Las 16 skins conservan materiales y detalles propios sobre una malla humana articulada. El corredor usa el modelo y clip animado CesiumMan (Cesium, CC BY 4.0), con textura reemplazada, esqueletos independientes y accesorios que siguen sus huesos. La carrera ajusta los huesos mediante cinemática inversa de piernas, balanceo opuesto de brazos, codos flexionados y tobillos orientados al apoyo. Los cambios mezclan una postura recogida y amortiguación al aterrizar; el hangar tiene reposo con brazos bajos. El cuerpo usa un material de deformación exclusivo, separado de la armadura rígida. Si el recurso falla se usa el rig procedural de reserva. No se afirma que el clip sea captura de movimiento. [Créditos](public/assets/characters/ATTRIBUTION.md).
 
 Los cambios rápidos se almacenan durante la transición, la gravedad usa interpolación suave y la muerte muestra un tropiezo breve. La preferencia de movimiento reducido desactiva los efectos de pantalla y las sacudidas.
 
