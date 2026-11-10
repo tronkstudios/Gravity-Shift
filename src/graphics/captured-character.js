@@ -2,7 +2,7 @@ import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { SkeletonUtils } from "three/examples/jsm/utils/SkeletonUtils.js";
 import { applySkeletalGait } from "./skeletal-gait.js";
-import { addArmorDetails } from "./armor-details.js";
+import { addRunnerSuit } from "./runner-suit.js";
 let template = null;
 export async function loadCapturedCharacter() {
   const loader = new GLTFLoader();
@@ -41,17 +41,22 @@ export function buildCapturedCharacter(skin, source = template) {
   model.position.y -= bounds.min.y * scale;
   const primary = new THREE.MeshStandardMaterial({
     color: skin.primaryColor,
-    metalness: Math.min(0.55, skin.metalness),
-    roughness: Math.max(0.42, skin.roughness),
+    metalness: Math.min(0.25, skin.metalness),
+    roughness: Math.max(0.65, skin.roughness),
   });
   // r128 caches shader variants per material: rigid armor must never share the skinned material.
   const bodyMaterial = primary.clone();
+  bodyMaterial.color
+    .set(skin.secondaryColor)
+    .lerp(new THREE.Color(0x17212b), 0.65);
+  bodyMaterial.roughness = 0.92;
+  bodyMaterial.metalness = 0.03;
   bodyMaterial.skinning = true;
   bodyMaterial.name = "deforming-runner-body";
   const secondary = new THREE.MeshStandardMaterial({
     color: skin.secondaryColor,
-    metalness: 0.3,
-    roughness: 0.65,
+    metalness: 0.12,
+    roughness: 0.8,
   });
   const glow = new THREE.MeshBasicMaterial({ color: skin.glowColor });
   // The original branded texture is deliberately replaced with our suit material.
@@ -111,17 +116,6 @@ export function buildCapturedCharacter(skin, source = template) {
   rig.rightArm.userData.joint = rig.joints.rightElbow;
   rig.leftLeg.userData.endJoint = rig.joints.leftAnkle;
   rig.rightLeg.userData.endJoint = rig.joints.rightAnkle;
-  addArmorDetails(rig, skin);
-  const helmet = new THREE.Mesh(
-    new THREE.SphereGeometry(0.17, 16, 12),
-    secondary,
-  );
-  helmet.scale.set(1, 1.1, 1);
-  helmet.position.y = 0.06;
-  rig.head.add(helmet);
-  const visor = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.065, 0.025), glow);
-  visor.position.set(0, 0.07, -0.16);
-  rig.head.add(visor);
   rig.updateSockets = () => {
     root.updateMatrixWorld(true);
     root.getWorldQuaternion(inverseRoot).invert();
@@ -135,8 +129,10 @@ export function buildCapturedCharacter(skin, source = template) {
         .multiply(orientation)
         .multiply(correction);
     }
+    rig.updateSuit?.();
   };
   rig.updateSockets();
+  addRunnerSuit(rig, skin);
   return rig;
 }
 

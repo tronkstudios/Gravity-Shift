@@ -70,3 +70,7 @@ En cada paso fijo se detecta un candidato a cambio perfecto y se resuelven las c
 `platform/install.js` administra instalación, estado offline y actualización voluntaria. El build genera un service worker con versión por hash de contenido. `native/admob-provider.js` es la frontera con el SDK opcional de prueba; el juego no depende directamente de eventos nativos. `services/haptic-feedback.js` abstrae vibración web/nativa. `services/playtest-metrics.js` mantiene mediciones locales acotadas y exportación sin red.
 
 `android/`, `ios/` y `capacitor.config.json` contienen los proyectos nativos. Actions compila versiones de prueba sin claves comerciales y ejecuta Chromium con WebGL para comprobar cámara, esqueleto, prioridad de derrota y carga offline. No demuestra rendimiento de dispositivos físicos.
+
+## Traje del corredor
+
+`graphics/runner-suit.js` construye la carcasa sobre el cuerpo deformable: el tejido usa material mate independiente, las placas tienen cantos redondeados y las piezas largas se orientan entre pares de huesos. Casco y botas tienen marcos específicos para evitar heredar torsiones ajenas a su anatomía. Se mantienen cinco familias de diseño sin duplicar el controlador de movimiento. La posición de contacto se alinea con los planos reales del túnel; una sombra discreta desaparece durante las transferencias. Las capturas de Actions incluyen revisión frontal de las cinco familias y carrera en móvil.

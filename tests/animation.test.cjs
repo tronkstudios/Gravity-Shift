@@ -103,3 +103,53 @@ test("air pose and landing settle without T-pose or invalid transforms after rap
   assert.equal(motion.wasAirborne, false);
   assert.equal(motion.landing, 0);
 });
+
+test("fitted suit stays on its anatomical frames for all sixteen skins and orientations", async () => {
+  const [
+    { loadRunnerFixture },
+    { buildCapturedCharacter, CapturedMotionController },
+    { SKINS_CATALOG },
+    THREE,
+  ] = await Promise.all([
+    import("./helpers/runner-fixture.mjs"),
+    import("../src/graphics/captured-character.js"),
+    import("../src/data/skins.js"),
+    import("three"),
+  ]);
+  const source = await loadRunnerFixture();
+  const families = new Set();
+  for (const skin of SKINS_CATALOG) {
+    const rig = buildCapturedCharacter(skin, source),
+      motion = new CapturedMotionController();
+    motion.bind(rig);
+    families.add(rig.designFamily);
+    for (const roll of [0, Math.PI / 2, Math.PI]) {
+      rig.root.rotation.z = roll;
+      motion.update(rig, 0.1, 0.8, false, 0);
+      rig.root.updateMatrixWorld(true);
+      for (const side of ["left", "right"]) {
+        const boot = rig.suitFrames[side + "-boot"];
+        const target = rig.root.worldToLocal(
+          rig.bones[side + "Ankle"].getWorldPosition(new THREE.Vector3()),
+        );
+        assert.ok(
+          boot.position.distanceTo(target) < 1e-6,
+          "boot follows the ankle instead of a bind-pose offset",
+        );
+      }
+      const helmet = rig.suitFrames.helmet;
+      assert.ok(
+        helmet.quaternion.angleTo(new THREE.Quaternion()) < 0.001,
+        "helmet faces forward",
+      );
+      assert.ok(
+        new THREE.Box3()
+          .setFromObject(helmet)
+          .getSize(new THREE.Vector3())
+          .length() < 0.65,
+        "helmet remains in human proportion",
+      );
+    }
+  }
+  assert.equal(families.size, 5);
+});

@@ -283,9 +283,9 @@ test("deforming body shader and anatomical poses render in the menu and race", a
       ({ phase, air }) => {
         const g = window.gravityShiftGame;
         g.player.rigAnimator.update(g.player.currentRig, 0.1, phase, air, 0.5);
-        g.camera.position.set(2.5, -4.9, 3.3);
+        g.camera.position.set(2.5, g.player.root.position.y + 1.25, 3.3);
         g.camera.up.set(0, 1, 0);
-        g.camera.lookAt(0, -5.2, 0);
+        g.camera.lookAt(0, g.player.root.position.y + 0.8, 0);
         g.camera.fov = 40;
         g.camera.updateProjectionMatrix();
         document.getElementById("screen-hud").style.visibility = "hidden";
@@ -293,5 +293,40 @@ test("deforming body shader and anatomical poses render in the menu and race", a
       { phase, air },
     );
     await screenshot(page, info, "runner-" + name + ".png");
+  }
+});
+
+test("character art review across five suit silhouettes", async ({
+  page,
+}, info) => {
+  test.skip(
+    info.project.name !== "desktop",
+    "Mobile in-game art is captured by the pose test.",
+  );
+  await ready(page);
+  await freezeRun(page);
+  for (const skin of ["core", "phantom", "titan", "volt", "nebula"]) {
+    await page.evaluate((skin) => {
+      const g = window.gravityShiftGame;
+      g.player.applySkin(skin);
+      g.player.update(0, 30, g.gravitySys);
+      g.player.rigAnimator.update(
+        g.player.currentRig,
+        0.05,
+        Math.PI * 0.3,
+        false,
+        0,
+        true,
+      );
+      document.getElementById("screen-hud").style.visibility = "hidden";
+      g.world.tunnelSegments.forEach((segment) => (segment.visible = false));
+      g.world.speedDust.visible = false;
+      g.camera.position.set(-2, -5.8, -3.25);
+      g.camera.up.set(0, 1, 0);
+      g.camera.lookAt(0, -6.05, 0);
+      g.camera.fov = 35;
+      g.camera.updateProjectionMatrix();
+    }, skin);
+    await screenshot(page, info, "design-" + skin + ".png");
   }
 });

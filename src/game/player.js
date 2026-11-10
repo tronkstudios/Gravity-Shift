@@ -24,6 +24,20 @@ export class Player {
   }
 
   buildSupportSystems() {
+    this.contactShadow = new THREE.Mesh(
+      new THREE.CircleGeometry(0.24, 24),
+      new THREE.MeshBasicMaterial({
+        color: 0x02070c,
+        transparent: true,
+        opacity: 0.24,
+        depthWrite: false,
+      }),
+    );
+    this.contactShadow.rotation.x = -Math.PI / 2;
+    this.contactShadow.position.y = 0.012;
+    this.contactShadow.scale.y = 0.7;
+    this.visualGroup.add(this.contactShadow);
+
     const shieldGeo = new THREE.OctahedronGeometry(1.25, 1);
     this.shieldMat = new THREE.MeshBasicMaterial({
       color: PALETTE.CYAN,
@@ -36,7 +50,7 @@ export class Player {
     this.shieldMesh.position.y = 1.0;
     this.visualGroup.add(this.shieldMesh);
 
-    this.suitLight = new THREE.PointLight(PALETTE.CYAN, 1.4, 9.5);
+    this.suitLight = new THREE.PointLight(PALETTE.CYAN, 0.4, 6);
     this.suitLight.position.set(0, 1.2, 0.5);
     this.visualGroup.add(this.suitLight);
 
@@ -124,6 +138,7 @@ export class Player {
   }
 
   update(dt, speed, gravitySys, isMenuShowcase = false) {
+    this.contactShadow.visible = !gravitySys.isTransitioning;
     this.shieldTimer = Math.max(0, this.shieldTimer - dt);
     this.shieldMesh.visible = this.shieldTimer > 0;
     if (this.shieldTimer > 0) {
