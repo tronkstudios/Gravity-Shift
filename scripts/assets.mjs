@@ -37,6 +37,7 @@ export async function prepareAssets() {
     "node_modules/@fortawesome/fontawesome-free/LICENSE.txt",
     "dist/licenses/fontawesome.txt",
   );
+  await cp("node_modules/three/LICENSE", "dist/licenses/three.txt");
   const svg = await readFile("public/assets/icons/mark.svg");
   for (const size of [192, 512])
     await sharp(svg)

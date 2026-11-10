@@ -574,6 +574,6 @@ export class GravityShiftGame {
       this.renderer.render(this.scene, this.camera);
     }
     if (this.state === "PLAYING")
-      this.metrics?.frame(frameSeconds, this.renderer, now);
+      this.metrics?.frame(frameSeconds, this.renderer, performance.now());
   }
 }
