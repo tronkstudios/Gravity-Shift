@@ -35,7 +35,7 @@ Cada sector cambia la iluminación progresivamente y tiene su línea musical. El
 
 ## Personajes y movimiento
 
-Las 16 skins mantienen su identidad en cinco familias de siluetas. Los rigs tienen codos, rodillas y tobillos articulados. `human-motion.js` genera clips de carrera y transferencia a partir de una trayectoria de pie con cinemática inversa, los mezcla con AnimationMixer y añade un clip de amortiguación de aterrizaje. Son animaciones procedurales, no captura de movimiento ni clips de un proveedor externo.
+Las 16 skins conservan materiales y detalles propios sobre una malla humana articulada. El corredor usa el modelo y clip animado CesiumMan (Cesium, CC BY 4.0), con textura reemplazada, esqueletos independientes y accesorios que siguen sus huesos. Si el recurso falla se usa el rig procedural de reserva. No se afirma que el clip sea captura de movimiento. [Créditos](public/assets/characters/ATTRIBUTION.md).
 
 Los cambios rápidos se almacenan durante la transición, la gravedad usa interpolación suave y la muerte muestra un tropiezo breve. La preferencia de movimiento reducido desactiva los efectos de pantalla y las sacudidas.
 
@@ -67,7 +67,7 @@ npm run dev
 
 La URL local es `http://localhost:4173`. Reconstruye y recarga después de editar. `npm run build` genera `dist/` para hosting estático. `npm run package` añade el ZIP de fuentes y requiere Python 3. GitHub Actions valida y adjunta la distribución en cada push/PR. Las herramientas de descarga están dentro de Ajustes.
 
-Los módulos de `src/` y `styles.css` son la fuente de verdad. `index.html`, `game.js` y `dist/` se generan y se excluyen de Git. Three.js 0.128.0 y Tailwind se incluyen en la compilación; fuentes e iconos se descargan desde sus CDN. [Arquitectura y dependencias](docs/architecture.md).
+Los módulos de `src/` y `styles.css` son la fuente de verdad. `index.html`, `game.js` y `dist/` se generan y se excluyen de Git. Three.js 0.128.0 y Tailwind se incluyen en la compilación; fuentes, iconos y modelo se incluyen localmente para funcionar sin CDN. [Arquitectura y dependencias](docs/architecture.md).
 
 ## Calidad y protección del progreso
 
@@ -86,3 +86,11 @@ El escudo inactivo no dibuja ni escribe profundidad. Las partículas no escriben
 45 pruebas cubren guardado, economía, colisiones a 20 FPS, rutas seguras, cambios perfectos, sectores, hazañas, animaciones, recompensas publicitarias, reintento, continuación y límites de módulos. Los tests de aplicación usan un renderer de prueba: no sustituyen una revisión visual WebGL en navegador ni en dispositivos.
 
 El progreso solo se guarda en localStorage, conservando `GRAVITY_SHIFT_SAVE_V2`. No hay backend, transferencia automática entre dominios ni clasificaciones remotas. La entrega es web; no contiene binarios firmados ni publicaciones en App Store o Google Play.
+
+## Instalación, sonido y diagnóstico
+
+La web incluye manifiesto e instalación PWA. Tras preparar la primera carga, conserva modelo, fuentes, iconos, reto y política de privacidad sin conexión. Las actualizaciones requieren pulsar el botón de Ajustes para recargar.
+
+Hay pasos y aterrizajes sintetizados, vibración opcional y diagnóstico local exportable. El informe distingue tiempo de envío al renderer de latencia de pantalla; no sustituye una prueba en móvil real. No se transmiten las métricas.
+
+[Compilaciones Android/iOS y publicación pendiente](docs/MOBILE-RELEASE.md). Actions genera APK de depuración y aplicación para simulador iOS. Los anuncios nativos usan IDs de prueba y se activan de forma voluntaria desde Ajustes; no producen ingresos.

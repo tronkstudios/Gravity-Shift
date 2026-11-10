@@ -28,3 +28,30 @@ await sharp(svg)
   .png()
   .toFile("ios/App/App/Assets.xcassets/AppIcon.appiconset/AppIcon-512@2x.png");
 console.log("Native launcher icons generated.");
+// Keep platform image dimensions while replacing generated Capacitor splash art.
+import { readdir } from "node:fs/promises";
+async function walk(dir) {
+  const out = [];
+  for (const e of await readdir(dir, { withFileTypes: true })) {
+    const p = `${dir}/${e.name}`;
+    if (e.isDirectory()) out.push(...(await walk(p)));
+    else if (e.name.endsWith(".png") && e.name.startsWith("splash"))
+      out.push(p);
+  }
+  return out;
+}
+for (const file of [
+  ...(await walk("android/app/src/main/res")),
+  ...(await walk("ios/App/App/Assets.xcassets/Splash.imageset")),
+]) {
+  const { width, height } = await sharp(file).metadata();
+  const size = Math.round(Math.min(width, height) * 0.23);
+  const mark = await sharp(svg).resize(size, size).png().toBuffer();
+  const output = await sharp({
+    create: { width, height, channels: 4, background: "#0b1423" },
+  })
+    .composite([{ input: mark, gravity: "center" }])
+    .png()
+    .toBuffer();
+  await writeFile(file, output);
+}
