@@ -34,9 +34,9 @@ function visorGeometry() {
     for (let i = 0; i <= cols; i++) {
       const a = -1.12 + (i / cols) * 2.24;
       vertices.push(
-        Math.sin(a) * 0.129,
+        Math.sin(a) * 0.142,
         0.025 + (row ? -0.038 : 0.038),
-        -Math.cos(a) * 0.126,
+        -Math.cos(a) * 0.148,
       );
     }
   for (let i = 0; i < cols; i++) {
@@ -139,7 +139,7 @@ export function addRunnerSuit(rig, skin) {
     [0, 0.022, 0],
   );
   belt.scale.z = 0.72;
-  plate(chest, 0.042, 0.033, 0.015, armor, [0, 0.025, -0.095]);
+  plate(chest, 0.042, 0.033, 0.015, armor, [0, 0.025, -0.108]);
   const collar = frame("collar", "neck", "head");
   const collarRing = mesh(
     collar,
@@ -152,11 +152,11 @@ export function addRunnerSuit(rig, skin) {
     const arm = frame(side + "-upper-arm", side + "Arm", side + "Elbow");
     const shoulder = mesh(
       arm,
-      new THREE.CylinderGeometry(0.063 * bulk, 0.072 * bulk, 0.105, 12),
+      new THREE.CylinderGeometry(0.075 * bulk, 0.083 * bulk, 0.105, 12),
       armor,
       [0, 0.055, 0],
     );
-    shoulder.scale.z = 0.85;
+    shoulder.scale.z = 1.05;
     const sleeve = mesh(
       arm,
       new THREE.CylinderGeometry(0.047, 0.058, 0.12, 12),
@@ -164,7 +164,7 @@ export function addRunnerSuit(rig, skin) {
       [0, 0.16, 0],
     );
     sleeve.scale.z = 0.9;
-    plate(arm, 0.012, 0.055, 0.008, light, [0, 0.075, 0.061]);
+    plate(arm, 0.012, 0.055, 0.008, light, [0, 0.075, 0.099]);
     const forearm = frame(side + "-forearm", side + "Elbow", side + "Hand");
     mesh(forearm, new THREE.SphereGeometry(0.052, 12, 8), fabric);
     const bracer = mesh(
@@ -174,7 +174,7 @@ export function addRunnerSuit(rig, skin) {
       [0, 0.115, 0],
     );
     bracer.scale.z = 0.85;
-    plate(forearm, 0.038, 0.08, 0.012, trim, [0, 0.11, -0.05]);
+    plate(forearm, 0.038, 0.08, 0.012, trim, [0, 0.11, -0.066]);
     const thigh = frame(side + "-thigh", side + "Leg", side + "Knee");
     const thighShell = mesh(
       thigh,
@@ -183,10 +183,10 @@ export function addRunnerSuit(rig, skin) {
       [0, 0.115, 0],
     );
     thighShell.scale.z = 0.92;
-    plate(thigh, 0.072, 0.14, 0.022, armor, [0, 0.105, -0.059]);
+    plate(thigh, 0.072, 0.14, 0.022, armor, [0, 0.105, -0.088]);
     const shin = frame(side + "-shin", side + "Knee", side + "Ankle");
     mesh(shin, new THREE.SphereGeometry(0.055, 12, 8), fabric);
-    plate(shin, 0.09 * bulk, 0.073, 0.028, armor, [0, 0.016, -0.047]);
+    plate(shin, 0.09 * bulk, 0.073, 0.028, armor, [0, 0.016, -0.076]);
     const calf = mesh(
       shin,
       new THREE.CylinderGeometry(0.045, 0.058, 0.205, 14),
@@ -194,8 +194,8 @@ export function addRunnerSuit(rig, skin) {
       [0, 0.16, 0],
     );
     calf.scale.z = 0.88;
-    plate(shin, 0.072, 0.17, 0.025, armor, [0, 0.155, -0.047]);
-    plate(shin, 0.012, 0.11, 0.008, light, [0, 0.16, 0.051]);
+    plate(shin, 0.072, 0.17, 0.025, armor, [0, 0.155, -0.074]);
+    plate(shin, 0.012, 0.11, 0.008, light, [0, 0.16, 0.061]);
     const glove = frame(side + "-glove", side + "Hand", null);
     mesh(
       glove,
@@ -217,10 +217,10 @@ export function addRunnerSuit(rig, skin) {
     [0, 0.074, 0],
   );
   head.scale.set(heavy ? 0.143 : 0.128, 0.154, 0.133);
-  plate(helmet, 0.105, 0.055, 0.08, trim, [0, -0.025, -0.055]);
+  plate(helmet, 0.105, 0.055, 0.022, trim, [0, -0.025, -0.145]);
   const visor = mesh(helmet, visorGeometry(), glass, [0, 0.074, 0]);
   visor.name = "panoramic-dark-visor";
-  plate(helmet, 0.065, 0.008, 0.008, light, [0, 0.073, -0.132]);
+  plate(helmet, 0.065, 0.008, 0.008, light, [0, 0.073, -0.16]);
   for (const sign of [-1, 1]) {
     mesh(helmet, new THREE.CylinderGeometry(0.032, 0.032, 0.018, 12), trim, [
       sign * 0.128,

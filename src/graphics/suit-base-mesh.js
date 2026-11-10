@@ -2,6 +2,8 @@
 export function trimSuitBase(mesh) {
   const hidden = new Set([
     "Skeleton_neck_joint_2",
+    "Skeleton_torso_joint_2",
+    "torso_joint_3",
     "Skeleton_arm_joint_L__2_",
     "Skeleton_arm_joint_R__3_",
     "leg_joint_L_3",
