@@ -40,6 +40,7 @@ export function buildCapturedCharacter(skin) {
   model.position.y -= bounds.min.y * scale;
   const primary = new THREE.MeshStandardMaterial({
     color: skin.primaryColor,
+    skinning: true,
     metalness: Math.min(0.55, skin.metalness),
     roughness: Math.max(0.42, skin.roughness),
   });

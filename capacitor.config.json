@@ -1,0 +1,1 @@
+{"appId":"com.tronkstudios.gravityshift","appName":"Gravity Shift","webDir":"dist","backgroundColor":"#0b1423","server":{"androidScheme":"https","iosScheme":"capacitor"},"android":{"backgroundColor":"#0b1423"},"ios":{"backgroundColor":"#0b1423","contentInset":"automatic"}}

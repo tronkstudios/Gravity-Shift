@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Gravity Shift</string>
+    <string name="title_activity_main">Gravity Shift</string>
+    <string name="package_name">com.tronkstudios.gravityshift</string>
+    <string name="custom_url_scheme">com.tronkstudios.gravityshift</string>
+</resources>
