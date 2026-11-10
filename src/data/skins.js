@@ -21,7 +21,7 @@ export const RARITY_META = {
     badgeBg: "rgba(250,204,21,0.20)",
   },
   AD_EXCLUSIVE: {
-    label: "EXCLUSIVO AD",
+    label: "ESPECIAL",
     colorHex: "#38BDF8",
     badgeBg: "rgba(56,189,248,0.22)",
   },

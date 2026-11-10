@@ -63,7 +63,8 @@ export function applySkeletalGait(
       SOLE_HEIGHT;
     drop = Math.max(drop, h.y - maxHeight);
   }
-  rig.model.position.y -= drop * (1 - airWeight) + landing * 0.045;
+  rig.model.position.y -=
+    drop * (1 - airWeight) + landing * 0.045 + (rig.boardActive ? 0.065 : 0);
   root.updateMatrixWorld(true);
   aim(
     root,
@@ -81,7 +82,7 @@ export function applySkeletalGait(
       elbow = bones[`${side}Elbow`],
       hand = bones[`${side}Hand`];
     const wave = Math.sin(phase + offset * Math.PI * 2);
-    const swing = idle ? 0.04 : wave * 0.55;
+    const swing = idle ? 0.04 : rig.boardActive ? -0.1 : wave * 0.55;
     const armAngle = THREE.MathUtils.lerp(swing, -0.12, airWeight);
     const elbowAngle = idle
       ? 0.2
@@ -102,9 +103,11 @@ export function applySkeletalGait(
       a = localPosition(root, ankle);
     const upperLength = h.distanceTo(k),
       lowerLength = k.distanceTo(a);
-    const foot = idle
-      ? { z: 0, lift: 0 }
-      : sampleFoot(phase / (Math.PI * 2) + offset);
+    const foot = rig.boardActive
+      ? { z: side === "left" ? -0.18 : 0.18, lift: 0 }
+      : idle
+        ? { z: 0, lift: 0 }
+        : sampleFoot(phase / (Math.PI * 2) + offset);
     const pose = solveLeg(
       foot.z * 1.45,
       Math.max(0.1, h.y - SOLE_HEIGHT - foot.lift * 1.2),

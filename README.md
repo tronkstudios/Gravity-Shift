@@ -106,3 +106,9 @@ Hay pasos y aterrizajes sintetizados, vibración opcional y diagnóstico local e
 - Cinco siluetas de traje más diferenciadas, con reglas de colisión iguales para todas.
 
 Las pruebas de navegador usan Chromium y emulación móvil. El rendimiento y tacto definitivos deben comprobarse también con personas en teléfonos físicos.
+
+## Tienda, objetos y corredores raros
+
+En **TIENDA** puedes mejorar tres veces la duración de cada objeto y comprar tablas de reserva con energía. En la pista aparecen imanes, tablas de protección, puntos ×2 y superbotas. **ESPACIO** o el botón central del pad permiten saltar; las superbotas elevan el salto. **B** o el botón TABLA gastan una tabla del inventario. Una tabla activa absorbe un choque y se rompe. El multiplicador temporal duplica puntos, no energía.
+
+Los corredores raros aparecen con un 0,6 % de probabilidad por comprobación cada 120 m, desde 180 m, como máximo uno por partida normal. Corren al 88 % de tu velocidad y esquivan obstáculos. Sigue su ruta y alcánzalo físicamente para guardar su skin; conservarás el traje aunque después pierdas. Los encuentros solo seleccionan skins bloqueadas. El diario no admite inventario ni ventajas de mejoras permanentes.

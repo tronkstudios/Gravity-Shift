@@ -1,3 +1,5 @@
+import { createItemVisual, itemMaterials } from "../graphics/item-visuals.js";
+import { ITEM_TYPES } from "../data/items.js";
 import { batchTunnelSegments } from "../graphics/tunnel-batching.js";
 import { obstacleContact } from "./collision-shapes.js";
 import { RUN_PHRASES, zoneForDistance } from "../data/run-content.js";
@@ -18,6 +20,9 @@ export class ProceduralWorld {
     this.collectibles = [];
     this.obstaclePool = { BARRIER: [], LASER: [], HAZARD_ZONE: [], MOVING: [] };
     this.coinPool = [];
+    this.powerups = [];
+    this.powerupPool = Object.fromEntries(ITEM_TYPES.map((type) => [type, []]));
+    this.itemMaterials = itemMaterials();
 
     this.nextSegmentZ = 20;
     this.nextPatternZ = -48;
@@ -299,6 +304,9 @@ export class ProceduralWorld {
     this.collectibles.forEach((coin) => this.recycleCoin(coin));
     this.obstacles = [];
     this.collectibles = [];
+    this.powerups.forEach((item) => this.recyclePowerup(item));
+    this.powerups = [];
+    this.magnetTarget = null;
   }
 
   resetWorld() {
@@ -432,6 +440,33 @@ export class ProceduralWorld {
     });
   }
 
+  recyclePowerup(item) {
+    this.scene.remove(item.mesh);
+    const pool = this.powerupPool[item.type];
+    if (pool.length < 8) pool.push(item.mesh);
+    else this.releaseMesh(item.mesh);
+  }
+  spawnPowerup(type, surfaceKey, z) {
+    const surface = SURFACES[surfaceKey],
+      mesh =
+        this.powerupPool[type].pop() ||
+        createItemVisual(type, this.itemMaterials);
+    mesh.rotation.set(0, 0, 0);
+    mesh.position.set(
+      surface.basePos.x + surface.normal.x * 1.15,
+      surface.basePos.y + surface.normal.y * 1.15,
+      z,
+    );
+    this.scene.add(mesh);
+    this.powerups.push({
+      type,
+      surfaceKey,
+      mesh,
+      base: mesh.position.clone(),
+      collected: false,
+    });
+    return this.powerups.at(-1);
+  }
   spawnEnergyTrail(surfaceKey, startZ, count = 4, spacing = 4.2, value = 1) {
     const surf = SURFACES[surfaceKey];
     const orbGeo = this.orbGeometry;
@@ -530,6 +565,10 @@ export class ProceduralWorld {
         ob.safeSurfaces = branch ? [safe, branch] : [safe];
       }
       this.spawnEnergyTrail(safe, z + 18, 4, 4);
+      if (this.patternCounter === 0 && beat === 0)
+        this.spawnPowerup("magnet", safe, z + 25);
+      else if (this.rng.next() < 0.16)
+        this.spawnPowerup(this.rng.pick(ITEM_TYPES), safe, z + 27);
       if (branch) this.spawnEnergyTrail(branch, z + 18, 4, 4);
       if (predictedDistance > 120 && beat === 1)
         this.spawnEnergyTrail(
@@ -616,6 +655,13 @@ export class ProceduralWorld {
     for (let i = this.collectibles.length - 1; i >= 0; i--) {
       const c = this.collectibles[i];
       c.mesh.position.z += moveZ;
+      if (
+        this.magnetTarget &&
+        Math.abs(c.mesh.position.z) < 16 &&
+        c.mesh.position.distanceToSquared(this.magnetTarget) <
+          (this.magnetRadius || 8) ** 2
+      )
+        c.mesh.position.lerp(this.magnetTarget, 1 - Math.exp(-dt * 12));
       c.mesh.rotation.y += dt * 3.5;
       c.mesh.rotation.x += dt * 2.0;
 
@@ -625,6 +671,15 @@ export class ProceduralWorld {
       }
     }
 
+    for (let i = this.powerups.length - 1; i >= 0; i--) {
+      const item = this.powerups[i];
+      item.mesh.position.z += moveZ;
+      item.mesh.rotation.y += dt * 1.4;
+      if (item.collected || item.mesh.position.z > TUNNEL.DESPAWN_Z) {
+        this.recyclePowerup(item);
+        this.powerups.splice(i, 1);
+      }
+    }
     // 5. Advance Pattern Horizon
     this.nextPatternZ += moveZ;
     while (this.nextPatternZ > -TUNNEL.VISIBLE_AHEAD) {
@@ -632,7 +687,13 @@ export class ProceduralWorld {
     }
   }
 
-  checkCollisions(player, gravitySys, onOrbPicked, onObstacleHit) {
+  checkCollisions(
+    player,
+    gravitySys,
+    onOrbPicked,
+    onObstacleHit,
+    onPowerupPicked = () => {},
+  ) {
     const playerPos = player.root.position;
 
     // 1. Collectibles Check
@@ -648,6 +709,16 @@ export class ProceduralWorld {
       }
     }
 
+    for (const item of this.powerups || []) {
+      if (
+        !item.collected &&
+        Math.abs(item.mesh.position.z) < 1.2 &&
+        item.mesh.position.distanceToSquared(playerPos) < 3
+      ) {
+        item.collected = true;
+        onPowerupPicked(item.type);
+      }
+    }
     // Skip hazard collision if emergency shield is active
     if (player.shieldTimer > 0) return;
 

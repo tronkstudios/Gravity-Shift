@@ -1,3 +1,4 @@
+import { ITEM_TYPES } from "../data/items.js";
 import { contractFor } from "../game/run-contracts.js";
 import { validChallengeDate } from "../game/daily-challenge.js";
 import { ACHIEVEMENTS } from "../data/run-content.js";
@@ -21,6 +22,7 @@ export class ScoreManager {
     this.runFinalized = false;
     this.distance = 0;
     this.score = 0;
+    this.scoreBoost = 1;
     this.runEnergy = 0;
     this.multiplier = 1.0;
     this.streakProgress = 0;
@@ -35,6 +37,8 @@ export class ScoreManager {
     const defaults = {
       dailyRecords: {},
       achievements: [],
+      upgrades: { magnet: 0, board: 0, multiplier: 0, boots: 0 },
+      inventory: { boards: 0 },
       totalRuns: 0,
       bestScore: 0,
       bestDistance: 0,
@@ -62,6 +66,19 @@ export class ScoreManager {
           ...defaults,
           ...parsed,
           settings: { ...defaults.settings, ...(parsed.settings || {}) },
+        };
+        this.saveData.upgrades = Object.fromEntries(
+          ITEM_TYPES.map((type) => [
+            type,
+            Number.isInteger(parsed.upgrades?.[type])
+              ? Math.max(0, Math.min(3, parsed.upgrades[type]))
+              : 0,
+          ]),
+        );
+        this.saveData.inventory = {
+          boards: Number.isInteger(parsed.inventory?.boards)
+            ? Math.max(0, Math.min(50, parsed.inventory.boards))
+            : 0,
         };
         this.saveData.dailyRecords = {};
         for (const [date, result] of Object.entries(parsed.dailyRecords || {})
@@ -147,7 +164,7 @@ export class ScoreManager {
       this.persist();
     }
     this.checkContracts();
-    this.score += dMeters * 12 * this.multiplier;
+    this.score += dMeters * 12 * this.multiplier * this.scoreBoost;
 
     if (this.streakProgress > 0) {
       this.streakProgress = Math.max(0, this.streakProgress - dt * 0.14);
@@ -182,7 +199,7 @@ export class ScoreManager {
       this.streakProgress = 0.25;
       this.multiplier = Math.min(5.0, +(this.multiplier + 0.5).toFixed(1));
     }
-    this.score += 75 * this.multiplier * value;
+    this.score += 75 * this.multiplier * value * this.scoreBoost;
     this.checkContracts();
   }
 
@@ -205,7 +222,7 @@ export class ScoreManager {
     this.perfects++;
     this.multiplier = Math.min(5, this.multiplier + 0.5);
     this.streakProgress = 1;
-    this.score += 150 * this.multiplier;
+    this.score += 150 * this.multiplier * this.scoreBoost;
     this.checkAchievements();
     this.checkContracts();
   }

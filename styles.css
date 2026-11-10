@@ -1237,3 +1237,188 @@ body:has(#practice-panel:not(.hidden)) #danger-cue {
   margin: 8px 0 0;
   color: #a9b9c9;
 }
+
+.workshop-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 65;
+  background: #07101bef;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  pointer-events: auto;
+}
+.workshop-modal.hidden {
+  display: none;
+}
+.workshop-panel {
+  width: min(900px, 100%);
+  max-height: 90dvh;
+  overflow: auto;
+  padding: 26px;
+  border-radius: 16px;
+  color: #edf5ff;
+}
+.workshop-panel header {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: center;
+}
+.workshop-panel header button {
+  margin-left: 15px;
+  padding: 8px 12px;
+}
+.workshop-panel small {
+  font:
+    10px "JetBrains Mono",
+    monospace;
+  letter-spacing: 0.16em;
+  color: #61dce9;
+}
+.workshop-panel h2 {
+  font:
+    700 28px "Space Grotesk",
+    sans-serif;
+}
+.workshop-panel > p {
+  font:
+    12px/1.6 "Space Grotesk",
+    sans-serif;
+  color: #a2b6c9;
+  margin: 16px 0;
+}
+.workshop-cards {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+.workshop-card {
+  padding: 17px;
+  border: 1px solid #304158;
+  background: #122033;
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.workshop-card h3 {
+  font:
+    bold 16px "Space Grotesk",
+    sans-serif;
+}
+.workshop-card p {
+  font:
+    12px/1.6 "Space Grotesk",
+    sans-serif;
+  color: #afc1d3;
+}
+.workshop-card b {
+  font:
+    10px "JetBrains Mono",
+    monospace;
+  color: #cbe1f5;
+}
+.workshop-card button {
+  padding: 11px;
+  font:
+    10px "JetBrains Mono",
+    monospace;
+  margin-top: auto;
+}
+.workshop-card button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.reserve-board {
+  grid-column: 1/-1;
+}
+.item-symbol {
+  font:
+    bold 28px "Space Grotesk",
+    sans-serif;
+}
+.item-magnet {
+  color: #ff72bb;
+}
+.item-board {
+  color: #5cf1ff;
+}
+.item-multiplier {
+  color: #ffcc55;
+}
+.item-boots {
+  color: #9cf06a;
+}
+.active-items,
+.rival-notice {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 25;
+  pointer-events: none;
+  border: 1px solid #4d748d;
+  background: #0d1e31e8;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font:
+    10px "JetBrains Mono",
+    monospace;
+  color: #dff7ff;
+  max-width: 90vw;
+  text-align: center;
+}
+.active-items {
+  top: 115px;
+}
+.rival-notice {
+  top: 158px;
+  color: #ffdc94;
+  border-color: #c19a49;
+}
+.active-items[hidden],
+.rival-notice[hidden] {
+  display: none;
+}
+.board-button {
+  display: block;
+  padding: 5px 8px !important;
+  font-size: 9px !important;
+  margin: 3px 0;
+}
+.board-button[hidden] {
+  display: none;
+}
+.board-button:disabled {
+  opacity: 0.5;
+}
+@media (max-width: 640px) {
+  .workshop-modal {
+    padding: 10px;
+  }
+  .workshop-panel {
+    padding: 16px;
+    max-height: 94dvh;
+  }
+  .workshop-cards {
+    gap: 8px;
+  }
+  .workshop-card {
+    padding: 11px;
+  }
+  .workshop-card h3 {
+    font-size: 13px;
+  }
+  .active-items {
+    top: 112px;
+    font-size: 9px;
+  }
+  .rival-notice {
+    top: 153px;
+    font-size: 9px;
+  }
+  #btn-open-workshop {
+    padding: 12px !important;
+    font-size: 11px !important;
+  }
+}

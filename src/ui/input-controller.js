@@ -11,6 +11,9 @@ export class InputController {
     this.game = game;
   }
   bind() {
+    document.getElementById("btn-jump").onclick = () => this.game.items.jump();
+    document.getElementById("btn-use-board").onclick = () =>
+      this.game.items.useBoard();
     document.getElementById("btn-watch-replay").onclick = () =>
       this.game.replay.start();
     document.getElementById("btn-close-replay").onclick = () =>
@@ -69,6 +72,16 @@ export class InputController {
 
       if (this.game.state !== "PLAYING") return;
 
+      if (code === "Space") {
+        e.preventDefault();
+        this.game.items.jump();
+        return;
+      }
+      if (code === "KeyB") {
+        e.preventDefault();
+        this.game.items.useBoard();
+        return;
+      }
       if (code === "KeyW" || code === "ArrowUp") {
         e.preventDefault();
         this.game.triggerSurfaceShift("CEILING");

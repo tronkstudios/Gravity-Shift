@@ -17,18 +17,45 @@ export function segmentBox(a, b, box, radius = 0.18) {
     exit = Math.min(exit, Math.max(t1, t2));
     if (enter > exit) return null;
   }
-  return {
-    x: Math.max(box.x[0], Math.min(box.x[1], a.x + (b.x - a.x) * enter)),
-    y: Math.max(box.y[0], Math.min(box.y[1], a.y + (b.y - a.y) * enter)),
-  };
+  // Rounded corners: an expanded rectangle alone would report false diagonal hits.
+  const dx = b.x - a.x,
+    dy = b.y - a.y,
+    length = dx * dx + dy * dy,
+    candidates = [enter, exit, 0, 1];
+  for (const x of box.x)
+    for (const y of box.y)
+      if (length > 1e-12)
+        candidates.push(((x - a.x) * dx + (y - a.y) * dy) / length);
+  for (const axis of ["x", "y"])
+    if (Math.abs(b[axis] - a[axis]) > 1e-8)
+      for (const edge of box[axis])
+        candidates.push((edge - a[axis]) / (b[axis] - a[axis]));
+  let best = Infinity,
+    contact = null;
+  for (const raw of candidates) {
+    const t = Math.max(0, Math.min(1, raw)),
+      x = a.x + dx * t,
+      y = a.y + dy * t,
+      cx = Math.max(box.x[0], Math.min(box.x[1], x)),
+      cy = Math.max(box.y[0], Math.min(box.y[1], y)),
+      d = (x - cx) ** 2 + (y - cy) ** 2;
+    if (d < best) {
+      best = d;
+      contact = { x: cx, y: cy };
+    }
+  }
+  return best <= radius * radius + 1e-10 ? contact : null;
 }
 export function obstacleContact(ob, position, normal) {
-  if (
-    Math.abs(ob.mesh.position.z) >
-    (ob.type === "LASER" ? 0.3 : ob.type === "ROTATING" ? 0.625 : ob.halfD) +
-      0.18
-  )
-    return null;
+  const depth =
+    {
+      BARRIER: 0.75,
+      MOVING: 0.8,
+      HAZARD_ZONE: 3.75,
+      ROTATING: 0.625,
+      LASER: 0.3,
+    }[ob.type] ?? ob.halfD;
+  if (Math.abs(ob.mesh.position.z) > depth + 0.18) return null;
   const angle =
     ob.type === "ROTATING"
       ? ob.mesh.rotation.z
@@ -49,8 +76,8 @@ export function obstacleContact(ob, position, normal) {
       ? [{ x: [-6.6, 6.6], y: [-0.625, 0.625] }]
       : ob.type === "LASER"
         ? [
-            { x: [-5.2, 5.2], y: [0.96, 1.24] },
-            { x: [-5.2, 5.2], y: [2.06, 2.34] },
+            { x: [-5.2, 5.2], y: [0.96, 1.24], depth: 0.14 },
+            { x: [-5.2, 5.2], y: [2.06, 2.34], depth: 0.14 },
             { x: [-5.5, -4.9], y: [0, 3] },
             { x: [4.9, 5.5], y: [0, 3] },
           ]
@@ -61,12 +88,15 @@ export function obstacleContact(ob, position, normal) {
             },
           ];
   for (const box of boxes) {
-    const hit = segmentBox(a, b, box);
+    const halfDepth = box.depth ?? depth;
+    const dz = Math.max(0, Math.abs(origin.z) - halfDepth);
+    if (dz > 0.18) continue;
+    const hit = segmentBox(a, b, box, Math.sqrt(0.18 ** 2 - dz ** 2));
     if (hit)
       return {
         x: origin.x + cos * hit.x - sin * hit.y,
         y: origin.y + sin * hit.x + cos * hit.y,
-        z: Math.max(origin.z - ob.halfD, Math.min(origin.z + ob.halfD, 0)),
+        z: Math.max(origin.z - halfDepth, Math.min(origin.z + halfDepth, 0)),
       };
   }
   return null;

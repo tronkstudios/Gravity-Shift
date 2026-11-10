@@ -1,3 +1,4 @@
+import { ITEM_TYPES, ITEM_META } from "../data/items.js";
 import { styleForSkin } from "../data/skin-styles.js";
 import { NotificationQueue } from "../services/notification-queue.js";
 import { contractProgress } from "../game/run-contracts.js";
@@ -212,6 +213,8 @@ export class GameUI {
     this.game.audio?.cancelFeedback?.();
     this.notifications?.clear();
     document.getElementById("queued-shift").hidden = true;
+    document.getElementById("active-items").hidden = true;
+    document.getElementById("rival-notice").hidden = true;
     clearTimeout(this.toastTimeout);
     clearTimeout(this.flashTimeout);
     document.getElementById("perfect-feedback").classList.add("hidden");
@@ -509,6 +512,31 @@ export class GameUI {
 
   updateHUD() {
     this.updateSaveStatus();
+    const buffs = this.game.items?.active || {};
+    const active = ITEM_TYPES.filter((type) => buffs[type] > 0);
+    const itemsHUD = document.getElementById("active-items");
+    itemsHUD.textContent = active
+      .map((type) => ITEM_META[type].name + " " + Math.ceil(buffs[type]) + "s")
+      .join(" · ");
+    itemsHUD.hidden = !active.length;
+    const boardButton = document.getElementById("btn-use-board"),
+      boards = this.game.scoreMgr.saveData.inventory?.boards || 0;
+    boardButton.hidden =
+      this.game.runMode !== "normal" || (!boards && !buffs.board);
+    boardButton.disabled = !!buffs.board;
+    boardButton.textContent = buffs.board
+      ? "TABLA ACTIVA"
+      : "TABLA " + boards + " · B";
+    const rival = this.game.rivals?.active,
+      notice = document.getElementById("rival-notice");
+    notice.hidden = !rival;
+    notice.textContent = rival
+      ? "CORREDOR RARO · " +
+        rival.skin.name +
+        " · " +
+        Math.max(0, Math.round(-rival.z * 0.45)) +
+        " m POR DELANTE · ALCÁNZALO"
+      : "";
     const queued = this.game.gravitySys.pendingSurface;
     const queuedLabel = document.getElementById("queued-shift");
     queuedLabel.textContent = queued
@@ -586,7 +614,7 @@ export class GameUI {
       this.game.scoreMgr.distance,
     );
     document.getElementById("hud-speed").textContent =
-      Math.floor(this.game.currentSpeed) + " m/s";
+      Math.round(this.game.currentSpeed * 0.45) + " m/s";
     document.getElementById("hud-energy").textContent =
       this.game.runMode && this.game.runMode !== "normal"
         ? this.game.scoreMgr.runEnergy

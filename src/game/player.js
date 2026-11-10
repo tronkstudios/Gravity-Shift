@@ -19,11 +19,37 @@ export class Player {
     this.shieldTimer = 0;
     this.currentRig = null;
 
+    this.upDirection = new THREE.Vector3(0, 1, 0);
+    this.jumpOffset = 0;
+    this.jumpActive = false;
     this.buildSupportSystems();
     this.applySkin("core");
   }
 
   buildSupportSystems() {
+    this.board = new THREE.Group();
+    this.board.visible = false;
+    const deck = new THREE.Mesh(
+      new THREE.BoxGeometry(0.4, 0.055, 0.75),
+      new THREE.MeshStandardMaterial({
+        color: 0x172938,
+        roughness: 0.6,
+        metalness: 0.35,
+      }),
+    );
+    deck.position.y = -0.025;
+    this.board.add(deck);
+    const rails = new THREE.MeshBasicMaterial({ color: 0x5cf1ff });
+    for (const x of [-0.17, 0.17]) {
+      const rail = new THREE.Mesh(
+        new THREE.BoxGeometry(0.025, 0.018, 0.69),
+        rails,
+      );
+      rail.position.set(x, -0.01, 0);
+      this.board.add(rail);
+    }
+    this.visualGroup.add(this.board);
+
     this.contactShadow = new THREE.Mesh(
       new THREE.CircleGeometry(0.24, 24),
       new THREE.MeshBasicMaterial({
@@ -125,6 +151,20 @@ export class Player {
 
     this.visualGroup.add(this.currentRig.root);
     this.rigAnimator.bind(this.currentRig);
+    this.bootEffects = [];
+    const bootsMaterial = new THREE.MeshBasicMaterial({ color: 0x9cf06a });
+    for (const joint of ["leftAnkle", "rightAnkle"]) {
+      if (this.currentRig.joints[joint]) {
+        const ring = new THREE.Mesh(
+          new THREE.TorusGeometry(0.09, 0.012, 6, 14),
+          bootsMaterial,
+        );
+        ring.rotation.x = Math.PI / 2;
+        ring.visible = false;
+        this.currentRig.joints[joint].add(ring);
+        this.bootEffects.push(ring);
+      }
+    }
 
     this.torso = this.currentRig.torso;
     this.head = this.currentRig.head;
@@ -137,9 +177,34 @@ export class Player {
     this.particleMat.color.setHex(skin.glowColor);
   }
 
-  update(dt, speed, gravitySys, isMenuShowcase = false) {
-    this.contactShadow.visible = !gravitySys.isTransitioning;
+  setBootsActive(active) {
+    for (const mesh of this.bootEffects || []) mesh.visible = active;
+  }
+  setBoardActive(active) {
+    this.board.visible = active;
+    this.boardActive = active;
+    if (this.currentRig) this.currentRig.boardActive = active;
+  }
+  place(gravitySys) {
+    this.upDirection.set(0, 1, 0).applyQuaternion(gravitySys.currentQuat);
+    this.root.position
+      .set(gravitySys.currentPos2D.x, gravitySys.currentPos2D.y, 0)
+      .addScaledVector(
+        this.upDirection,
+        (this.jumpOffset || 0) + (this.boardActive ? 0.07 : 0),
+      );
+    this.root.quaternion.copy(gravitySys.currentQuat);
+  }
+  advancePhysics(dt) {
     this.shieldTimer = Math.max(0, this.shieldTimer - dt);
+    this.physicsTicked = true;
+  }
+  update(dt, speed, gravitySys, isMenuShowcase = false) {
+    this.contactShadow.visible =
+      !gravitySys.isTransitioning && !this.jumpActive;
+    if (!this.physicsTicked)
+      this.shieldTimer = Math.max(0, this.shieldTimer - dt);
+    this.physicsTicked = false;
     this.shieldMesh.visible = this.shieldTimer > 0;
     if (this.shieldTimer > 0) {
       this.shieldMesh.rotation.y += dt * 4;
@@ -149,10 +214,7 @@ export class Player {
       this.shieldMat.opacity = 0;
     }
 
-    this.root.position.x = gravitySys.currentPos2D.x;
-    this.root.position.y = gravitySys.currentPos2D.y;
-    this.root.position.z = 0;
-    this.root.quaternion.copy(gravitySys.currentQuat);
+    this.place(gravitySys);
 
     this.elapsed = (this.elapsed || 0) + dt;
     const nowSec = this.elapsed;
@@ -187,11 +249,13 @@ export class Player {
     } else {
       // World travel supplies the jump arc: do not add a second floating bounce.
       const follow = 1 - Math.exp(-dt * 20);
-      const airborne = gravitySys.isTransitioning;
+      const airborne = gravitySys.isTransitioning || this.jumpActive;
       const progress = airborne
         ? Math.min(
             1,
-            gravitySys.transitionElapsed / gravitySys.transitionDuration,
+            gravitySys.isTransitioning
+              ? gravitySys.transitionElapsed / gravitySys.transitionDuration
+              : this.jumpProgress || 0,
           )
         : 0;
       this.visualGroup.position.y = THREE.MathUtils.lerp(
@@ -212,8 +276,10 @@ export class Player {
         this.currentRig,
         dt,
         this.runCycleTime,
-        gravitySys.isTransitioning,
-        gravitySys.transitionElapsed / gravitySys.transitionDuration,
+        gravitySys.isTransitioning || this.jumpActive,
+        gravitySys.isTransitioning
+          ? gravitySys.transitionElapsed / gravitySys.transitionDuration
+          : this.jumpProgress || 0,
       );
 
     if (
@@ -249,7 +315,29 @@ export class Player {
     attr.needsUpdate = true;
   }
 
+  dispose() {
+    const geometries = new Set(),
+      materials = new Set();
+    this.root.traverse((node) => {
+      if (node.isSkinnedMesh) node.skeleton.dispose?.();
+      if (node.geometry) geometries.add(node.geometry);
+      if (node.material)
+        (Array.isArray(node.material)
+          ? node.material
+          : [node.material]
+        ).forEach((mat) => materials.add(mat));
+    });
+    geometries.add(this.particleSystem.geometry);
+    materials.add(this.particleMat);
+    for (const geo of geometries) geo.dispose();
+    for (const mat of materials) mat.dispose();
+    this.scene.remove(this.root);
+    this.scene.remove(this.particleSystem);
+  }
   reset() {
+    this.jumpOffset = 0;
+    this.jumpActive = false;
+    this.setBoardActive(false);
     this.rigAnimator.reset();
     this.runCycleTime = 0;
     this.isDead = false;

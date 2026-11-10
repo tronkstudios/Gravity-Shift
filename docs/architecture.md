@@ -92,3 +92,11 @@ GravitySystem guarda una única orden pendiente; repetir el destino actual la ca
 El catálogo contiene diez secuencias, incluidas secuencias de cuatro pasos, intervalos rítmicos y bifurcaciones posteriores a 300 m con dos salidas señalizadas. Cada salida marcada conserva su ruta de monedas libre de obstáculos en esa fila. El reto inicial sigue siendo 250 m y +75 de energía. Después, `game/run-contracts.js` alterna objetivos relativos de distancia, monedas y cambios perfectos, con dificultad creciente. Solo el modo normal entrega estas recompensas, una vez por objetivo y partida.
 
 `data/skin-styles.js` define cinco familias visuales. Las piezas pesadas, capuchas, faldones, aletas y cuellos facetados se vinculan a los marcos del traje. No alteran velocidad, tamaño de colisión ni economía. El hangar identifica la familia en vez de mostrar recuentos técnicos de mallas.
+
+## Objetos, tienda y corredores raros
+
+`data/items.js` declara cuatro objetos, costes y compras validadas. `game/run-items.js` administra sus temporizadores en pasos físicos, salto, tabla de un solo impacto y puntos ×2. El imán mueve monedas reales a su radio de recogida; no añade energía ficticia. Superbotas cambia la altura del siguiente salto y mantiene esa altura hasta aterrizar, aunque expire el efecto en el aire. Los objetos se generan sobre las rutas seguras y se reciclan en pools acotados.
+
+`ui/workshop.js` ofrece mejoras permanentes de duración (tres niveles por objeto) y tablas de reserva por energía del juego. Perfil y copias incluyen niveles e inventario validados. Solo el modo normal usa compras y mejoras; el diario conserva objetos y duraciones base iguales para todos, y la práctica mantiene sus ejercicios aislados.
+
+`game/rare-runners.js` hace una comprobación del 0,6 % cada 120 m, a partir de 180 m, con un máximo de un corredor por partida normal. Elige una skin todavía bloqueada. Su velocidad es el 88 % de la del jugador; anticipa las filas de obstáculos y cambia de superficie para esquivarlas. Una comprobación de seguridad busca una superficie libre si la trayectoria llega a solaparse con un obstáculo. La captura requiere proximidad real y concede la skin sin coste ni cambio automático de traje; el desbloqueo persiste tras la derrota. No aparecen en práctica ni en el reto diario. La probabilidad se aplica por comprobación, no por partida.

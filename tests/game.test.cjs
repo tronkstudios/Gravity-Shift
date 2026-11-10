@@ -1186,3 +1186,129 @@ test("death playback restores world transforms and cannot change score, currency
   assert.equal(game.lastDeath.mesh.position.z, snapshot.z);
   assert.ok(game.player.root.position.distanceTo(snapshot.position) < 1e-9);
 });
+
+test("workshop purchases persist and cannot overspend; backups retain upgrades and boards", async () => {
+  const { ScoreManager } = runtime();
+  const { buyUpgrade, buyBoard } = await import("../src/data/items.js");
+  const { exportBackup, parseBackup } =
+    await import("../src/persistence/save-backup.js");
+  const s = new ScoreManager();
+  s.saveData.totalEnergy = 200;
+  assert.ok(buyUpgrade(s.saveData, "magnet"));
+  assert.equal(s.saveData.totalEnergy, 80);
+  assert.equal(buyUpgrade(s.saveData, "magnet"), false);
+  assert.ok(buyBoard(s.saveData));
+  assert.equal(s.saveData.inventory.boards, 1);
+  assert.equal(s.saveData.totalEnergy, 20);
+  assert.equal(buyBoard(s.saveData), false);
+  s.persist();
+  const restored = new ScoreManager();
+  assert.equal(restored.saveData.upgrades.magnet, 1);
+  assert.equal(restored.saveData.inventory.boards, 1);
+  const backup = parseBackup(exportBackup(s.saveData));
+  assert.equal(backup.upgrades.magnet, 1);
+  assert.equal(backup.inventory.boards, 1);
+});
+test("a board absorbs one real collision and a second crash after grace ends the run", () => {
+  const { game } = visualGame();
+  game.world.clearObjects();
+  game.world.nextPatternZ = -10000;
+  game.items.collect("board");
+  game.world.spawnSurfaceObstacle("FLOOR", -0.3, "BARRIER");
+  game.animate(game.lastTime + 30);
+  assert.equal(game.state, "PLAYING");
+  assert.equal(game.items.active.board, 0);
+  assert.ok(game.player.shieldTimer > 0);
+  for (let i = 0; i < 11; i++) game.animate(game.lastTime + 100);
+  game.world.spawnSurfaceObstacle("FLOOR", -0.3, "BARRIER");
+  game.animate(game.lastTime + 30);
+  assert.equal(game.state, "GAMEOVER");
+});
+test("superboots clear a barrier that a regular jump cannot and upgrades stay out of daily runs", async () => {
+  const { game, THREE } = visualGame();
+  const { obstacleContact } = await import("../src/game/collision-shapes.js");
+  game.world.clearObjects();
+  game.world.spawnSurfaceObstacle("FLOOR", 0, "BARRIER");
+  const ob = game.world.obstacles[0];
+  game.items.jump();
+  game.items.tick(0.399);
+  game.player.place(game.gravitySys);
+  assert.ok(
+    obstacleContact(ob, game.player.root.position, game.player.upDirection),
+  );
+  game.items.cancelJump();
+  game.items.collect("boots");
+  game.items.jump();
+  game.items.tick(0.399);
+  game.player.place(game.gravitySys);
+  assert.equal(
+    obstacleContact(ob, game.player.root.position, game.player.upDirection),
+    null,
+  );
+  game.scoreMgr.saveData.upgrades.magnet = 3;
+  assert.equal(game.items.duration("magnet"), 14);
+  game.runMode = "daily";
+  assert.equal(game.items.duration("magnet"), 8);
+  assert.equal(game.items.useBoard(), false);
+});
+test("magnet pulls real coins into pickup range and score boosts never multiply currency", () => {
+  const { game, ScoreManager } = visualGame();
+  game.world.clearObjects();
+  game.world.nextPatternZ = -10000;
+  game.player.place(game.gravitySys);
+  game.world.spawnEnergyTrail("FLOOR", -5, 1);
+  game.items.collect("magnet");
+  for (let i = 0; i < 30; i++) game.animate(game.lastTime + 20);
+  assert.ok(game.scoreMgr.collectedCoins >= 1);
+  const a = new ScoreManager(),
+    b = new ScoreManager();
+  b.scoreBoost = 2;
+  a.collectOrb();
+  b.collectOrb();
+  assert.equal(b.score, a.score * 2);
+  assert.equal(a.saveData.totalEnergy, b.saveData.totalEnergy);
+});
+test("rare runners unlock their skin only when caught and the reward survives defeat", () => {
+  const { game } = visualGame();
+  game.world.clearObjects();
+  game.world.nextPatternZ = -10000;
+  game.player.place(game.gravitySys);
+  const energy = game.scoreMgr.saveData.totalEnergy;
+  assert.ok(game.rivals.spawn("phantom"));
+  assert.equal(game.scoreMgr.saveData.unlockedSkins.includes("phantom"), false);
+  game.rivals.active.z = -0.5;
+  game.rivals.tick(0.01);
+  assert.ok(game.scoreMgr.saveData.unlockedSkins.includes("phantom"));
+  assert.equal(game.scoreMgr.saveData.totalEnergy, energy);
+  assert.equal(game.rivals.active, null);
+  assert.equal(game.rivals.spawn("volt"), false);
+  game.handleGameOver();
+  assert.ok(game.scoreMgr.saveData.unlockedSkins.includes("phantom"));
+  game.startNewRun({ instant: true, mode: "daily" });
+  assert.equal(game.rivals.spawn("volt"), false);
+});
+test("rare runners travel slower and evade a real generated route without colliding", () => {
+  const { game } = visualGame();
+  game.world.resetWorld();
+  game.player.root.position.x = 100;
+  game.currentSpeed = 40;
+  game.rivals.spawn("phantom");
+  const start = game.rivals.active.z;
+  for (let i = 0; i < 900; i++) {
+    game.world.update(1 / 120, 40, (i / 120) * 18);
+    game.rivals.tick(1 / 120);
+    const rival = game.rivals.active;
+    assert.ok(rival);
+    assert.equal(
+      game.rivals.contacts(
+        rival.player.root.position,
+        rival.player.upDirection,
+        rival.z,
+      ),
+      false,
+    );
+  }
+  assert.ok(game.rivals.active.z > start);
+  assert.ok(game.rivals.active.z < 0);
+  game.rivals.despawn();
+});

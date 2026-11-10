@@ -1,3 +1,4 @@
+import { ITEM_TYPES } from "../data/items.js";
 import { SKINS_CATALOG } from "../data/skins.js";
 import { ACHIEVEMENTS } from "../data/run-content.js";
 import { validChallengeDate } from "../game/daily-challenge.js";
@@ -48,6 +49,13 @@ export function validateProfile(profile) {
     bestDistance: number(profile.bestDistance),
     totalEnergy: number(profile.totalEnergy),
     totalRuns: number(profile.totalRuns),
+    upgrades: Object.fromEntries(
+      ITEM_TYPES.map((type) => [
+        type,
+        Math.min(3, number(profile.upgrades?.[type])),
+      ]),
+    ),
+    inventory: { boards: Math.min(50, number(profile.inventory?.boards)) },
     unlockedSkins: unlocked,
     equippedSkin: unlocked.includes(profile.equippedSkin)
       ? profile.equippedSkin

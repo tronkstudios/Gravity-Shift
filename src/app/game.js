@@ -1,3 +1,6 @@
+import { RunItems } from "../game/run-items.js";
+import { RareRunners } from "../game/rare-runners.js";
+import { Workshop } from "../ui/workshop.js";
 import { RunReplay } from "../graphics/run-replay.js";
 import { HapticFeedback } from "../services/haptic-feedback.js";
 import { PlaytestMetrics } from "../services/playtest-metrics.js";
@@ -62,6 +65,9 @@ export class GravityShiftGame {
     this.world.resetWorld();
     this.zoneController = new ZoneController(this.scene, this.world);
     this.replay = new RunReplay(this);
+    this.items = new RunItems(this);
+    this.rivals = new RareRunners(this);
+    this.workshop = new Workshop(this);
 
     this.quality = new AdaptiveQuality(
       this.renderer,
@@ -75,6 +81,7 @@ export class GravityShiftGame {
     this.applySavedSettings();
     this.input = new InputController(this);
     this.input.bind();
+    this.workshop.bind();
     this.ui.refreshAllUI();
 
     this.lastTime = performance.now();
@@ -162,6 +169,8 @@ export class GravityShiftGame {
     if (mode === "daily" && !validChallengeDate(challengeDate))
       throw new Error("Fecha de reto inválida");
     this.replay?.clear();
+    this.items?.reset();
+    this.rivals?.reset();
     this.runMode = mode;
     this.scoreMgr.mode = mode;
     this.practice = mode === "practice" ? new PracticeController() : null;
@@ -248,6 +257,7 @@ export class GravityShiftGame {
     this.scoreMgr.reviveUsed = true;
     this.scoreMgr.persist();
     this.player.reset();
+    this.items?.cancelJump();
     this.replay?.clear();
     this.player.shieldTimer = 3.5;
     // Move past the collision instead of returning directly into it.
@@ -306,6 +316,7 @@ export class GravityShiftGame {
   }
 
   returnToMainMenu() {
+    this.rivals?.despawn();
     this.ui.clearTransientFeedback();
     this.state = "MENU";
     this.runMode = "normal";
@@ -466,6 +477,7 @@ export class GravityShiftGame {
       const step = 1 / 120;
       while (this.fixedAccumulator >= step && this.state === "PLAYING") {
         let perfectShift = false;
+        this.contactThisStep = false;
         const hadMission = this.scoreMgr.missionCompleted;
         this.currentSpeed =
           this.runMode === "practice"
@@ -501,12 +513,15 @@ export class GravityShiftGame {
             perfectShift = true;
           }
         }
+        this.items?.tick(step);
+        this.player.advancePhysics?.(step);
         this.player.root.position.set(
           this.gravitySys.currentPos2D.x,
           this.gravitySys.currentPos2D.y,
           0,
         );
         this.player.root.quaternion.copy(this.gravitySys.currentQuat);
+        this.player.place?.(this.gravitySys);
         this.world.update(step, this.currentSpeed, this.scoreMgr.distance);
         this.world.checkCollisions(
           this.player,
@@ -523,11 +538,20 @@ export class GravityShiftGame {
               );
           },
           (obstacle) => {
+            this.contactThisStep = true;
+            if (this.items?.absorb(obstacle)) return;
             this.lastDeath = obstacle;
             this.handleGameOver();
           },
+          (type) => this.items?.collect(type),
         );
-        if (perfectShift && this.state === "PLAYING") {
+        this.rivals?.tick(step);
+        if (
+          perfectShift &&
+          this.state === "PLAYING" &&
+          !this.contactThisStep &&
+          this.player.shieldTimer <= 0
+        ) {
           this.scoreMgr.awardPerfect();
           this.audio.playPerfect();
           this.haptics?.play("perfect");
@@ -552,6 +576,7 @@ export class GravityShiftGame {
         this.fixedAccumulator -= step;
       }
       this.player.update(dt, this.currentSpeed, this.gravitySys, false);
+      this.rivals?.render(dt);
       if (this.runMode === "practice" && this.state === "PLAYING") {
         this.practice.update(dt, this);
         this.ui.updatePractice();

@@ -20,6 +20,9 @@ export class RunReplay {
       ...g.world.obstacles
         .filter((o) => Math.abs(o.mesh.position.z) < 90)
         .map((o) => o.mesh),
+      ...(g.world.powerups || [])
+        .filter((o) => Math.abs(o.mesh.position.z) < 70)
+        .map((o) => o.mesh),
       ...g.world.collectibles
         .filter((o) => Math.abs(o.mesh.position.z) < 70)
         .map((o) => o.mesh),
@@ -29,9 +32,11 @@ export class RunReplay {
       position: g.player.root.position.clone(),
       quaternion: g.player.root.quaternion.clone(),
       phase: g.player.runCycleTime,
-      air: g.gravitySys.isTransitioning,
-      progress:
-        g.gravitySys.transitionElapsed / g.gravitySys.transitionDuration,
+      board: !!g.player.boardActive,
+      air: g.gravitySys.isTransitioning || g.player.jumpActive,
+      progress: g.gravitySys.isTransitioning
+        ? g.gravitySys.transitionElapsed / g.gravitySys.transitionDuration
+        : g.player.jumpProgress || 0,
       camera: g.camera.position.clone(),
       up: g.camera.up.clone(),
       fov: g.camera.fov,
@@ -75,7 +80,10 @@ export class RunReplay {
       cameraQuaternion: g.camera.quaternion.clone(),
       fov: g.camera.fov,
       shadow: g.player.contactShadow.visible,
+      rival: g.rivals?.active?.player.root,
+      board: !!g.player.boardActive,
     };
+    if (this.saved.rival) this.saved.rival.visible = false;
     this.marker = new THREE.Mesh(
       new THREE.SphereGeometry(0.11, 12, 8),
       new THREE.MeshBasicMaterial({ color: 0xff8066, depthTest: false }),
@@ -119,6 +127,7 @@ export class RunReplay {
     }
     g.player.root.position.lerpVectors(a.position, b.position, t);
     g.player.root.quaternion.slerpQuaternions(a.quaternion, b.quaternion, t);
+    g.player.setBoardActive(a.board);
     g.player.contactShadow.visible = !a.air;
     g.player.visualGroup.position.set(0, 0, 0);
     g.player.visualGroup.quaternion.identity();
@@ -168,6 +177,8 @@ export class RunReplay {
     g.player.root.quaternion.copy(this.saved.quaternion);
     g.player.visualGroup.position.copy(this.saved.visualPosition);
     g.player.visualGroup.quaternion.copy(this.saved.visualQuaternion);
+    if (this.saved.rival) this.saved.rival.visible = true;
+    g.player.setBoardActive(this.saved.board);
     g.player.contactShadow.visible = this.saved.shadow;
     g.cameraCtrl.shakeTimer = 0;
     g.camera.position.copy(this.saved.camera);

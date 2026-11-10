@@ -57,7 +57,8 @@
       ><strong id="countdown-number">3</strong>
       <p>
         W / ↑ techo · S / ↓ suelo<br />A / ← izquierda · D / → derecha<br /><span
-          >En móvil: desliza o toca las flechas</span
+          >ESPACIO / centro: saltar · B: tabla<br />En móvil: desliza o toca las
+          flechas</span
         >
       </p>
       <button id="btn-cancel-countdown" class="brutal-btn">VOLVER</button>
@@ -126,6 +127,45 @@
       <p>
         El recuadro marca el obstáculo; el punto señala el contacto calculado.
       </p>
+    </section>
+    <div id="active-items" class="active-items" hidden role="status"></div>
+    <div id="rival-notice" class="rival-notice" hidden role="status"></div>
+    <section
+      id="modal-workshop"
+      class="hidden workshop-modal"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Tienda de objetos y mejoras"
+    >
+      <div class="workshop-panel brutal-card">
+        <header>
+          <div>
+            <small>TALLER DEL CORREDOR</small>
+            <h2>Objetos y mejoras</h2>
+          </div>
+          <div>
+            ⚡ <b id="workshop-balance">0</b
+            ><button
+              id="btn-close-workshop"
+              class="brutal-btn"
+              aria-label="Cerrar tienda"
+            >
+              ✕
+            </button>
+          </div>
+        </header>
+        <p>
+          Mejora la duración de los objetos que recoges. Las compras se guardan
+          y se usan en partidas normales; el reto diario mantiene condiciones
+          iguales para todos.
+        </p>
+        <div id="workshop-cards" class="workshop-cards"></div>
+        <p>
+          En la pista: imán, tabla, puntos ×2 y superbotas. Salta con ESPACIO o
+          el botón central. Algunos corredores raros entregan su traje si
+          consigues alcanzarlos.
+        </p>
+      </div>
     </section>
     <!-- Toast Notification -->
     <div
@@ -256,6 +296,12 @@
               <span
                 >HANGAR 3D (<span id="menu-skins-unlocked">1/16</span>)</span
               >
+            </button>
+            <button
+              id="btn-open-workshop"
+              class="brutal-btn px-5 py-4 rounded text-base font-bold"
+            >
+              <i class="fa-solid fa-bag-shopping text-cyan"></i> TIENDA
             </button>
             <button
               id="btn-open-settings"
@@ -549,6 +595,9 @@
                   ▶ · E
                 </button>
               </div>
+              <button id="btn-use-board" class="brutal-btn board-button" hidden>
+                TABLA · B
+              </button>
               <span id="mission-label">RETO 0 / 250 m</span>
               <div><i id="mission-bar"></i></div>
             </div>
@@ -576,11 +625,13 @@
               <i class="fa-solid fa-caret-left text-cyan text-base"></i>
               <span>A</span>
             </button>
-            <div
-              class="rounded border border-steel/60 bg-void/80 flex items-center justify-center text-[9px] font-mono text-cyan"
+            <button
+              id="btn-jump"
+              class="brutal-btn rounded text-[8px] font-mono text-cyan"
+              aria-label="Saltar"
             >
-              4G
-            </div>
+              ↑<br />SALTAR
+            </button>
             <button
               data-surface="RIGHT"
               class="surface-pad-btn brutal-btn rounded flex flex-col items-center justify-center font-mono text-[10px] font-bold"

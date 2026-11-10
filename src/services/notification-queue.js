@@ -1,6 +1,12 @@
 /** Bounded feedback: important messages can preempt minor ones; duplicates coalesce. */
 export class NotificationQueue {
-  constructor(render, { schedule = setTimeout, cancel = clearTimeout } = {}) {
+  constructor(
+    render,
+    {
+      schedule = (fn, ms) => globalThis.setTimeout(fn, ms),
+      cancel = (id) => globalThis.clearTimeout(id),
+    } = {},
+  ) {
     this.render = render;
     this.schedule = schedule;
     this.cancel = cancel;

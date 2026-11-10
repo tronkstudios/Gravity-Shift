@@ -424,3 +424,129 @@ test("queued intent can be cancelled and death replay preserves the finished run
     }),
   ).toEqual(before);
 });
+
+test("workshop purchases survive reload and pickups change jumping and board animation", async ({
+  page,
+}, info) => {
+  await ready(page);
+  await page.locator("#btn-open-workshop").click();
+  await expect(page.locator("#modal-workshop")).toBeVisible();
+  await page.locator('[data-upgrade="magnet"]').click();
+  await page.locator("[data-buy-board]").click();
+  expect(
+    await page.evaluate(
+      () => window.gravityShiftGame.scoreMgr.saveData.upgrades.magnet,
+    ),
+  ).toBe(1);
+  await screenshot(page, info, "workshop.png");
+  await ready(page);
+  expect(
+    await page.evaluate(
+      () => window.gravityShiftGame.scoreMgr.saveData.inventory.boards,
+    ),
+  ).toBe(1);
+  await page.evaluate(() => {
+    const g = window.gravityShiftGame;
+    g.startNewRun({ instant: true });
+    g.world.clearObjects();
+    g.world.nextPatternZ = -10000;
+    g.items.useBoard();
+    g.items.collect("boots");
+    g.items.jump();
+    g.items.tick(0.38);
+    g.player.update(0, 30, g.gravitySys);
+    g.cameraCtrl.reset(g.gravitySys);
+    g.ui.updateHUD();
+    g.state = "QA_CAPTURE";
+  });
+  expect(
+    await page.evaluate(() => window.gravityShiftGame.player.jumpOffset),
+  ).toBeGreaterThan(3);
+  await screenshot(page, info, "superboots.png");
+  await page.evaluate(() => {
+    const g = window.gravityShiftGame;
+    g.items.cancelJump();
+    g.items.tick(0);
+    g.player.update(0.1, 30, g.gravitySys);
+    g.ui.updateHUD();
+  });
+  expect(
+    await page.evaluate(() => window.gravityShiftGame.player.board.visible),
+  ).toBe(true);
+  await screenshot(page, info, "hoverboard.png");
+});
+
+test("rare runner evades an obstacle and catching it permanently unlocks the outfit", async ({
+  page,
+}, info) => {
+  await ready(page);
+  await page.evaluate(() => {
+    const g = window.gravityShiftGame;
+    g.startNewRun({ instant: true });
+    g.world.clearObjects();
+    g.world.nextPatternZ = -10000;
+    g.player.place(g.gravitySys);
+    g.state = "QA_CAPTURE";
+    g.rivals.spawn("phantom");
+    g.rivals.active.z = -12;
+    g.world.spawnSurfaceObstacle("FLOOR", -26, "BARRIER");
+    g.state = "PLAYING";
+    for (let i = 0; i < 75; i++) {
+      g.world.update(1 / 120, 30, 0);
+      g.rivals.tick(1 / 120);
+    }
+    g.state = "QA_CAPTURE";
+  });
+  expect(
+    await page.evaluate(() => {
+      const g = window.gravityShiftGame,
+        r = g.rivals.active;
+      return g.rivals.contacts(
+        r.player.root.position,
+        r.player.upDirection,
+        r.z,
+      );
+    }),
+  ).toBe(false);
+  await page.evaluate(() => {
+    const g = window.gravityShiftGame,
+      r = g.rivals.active;
+    g.world.clearObjects();
+    r.z = -3;
+    r.gravity.setSurfaceImmediate("FLOOR");
+    g.rivals.render(0.1);
+    g.ui.updateHUD();
+  });
+  await expect(page.locator("#rival-notice")).toContainText("PHANTOM");
+  await screenshot(page, info, "rare-runner.png");
+  const energy = await page.evaluate(
+    () => window.gravityShiftGame.scoreMgr.saveData.totalEnergy,
+  );
+  await page.evaluate(() => {
+    const g = window.gravityShiftGame;
+    g.state = "PLAYING";
+    g.rivals.active.z = -0.3;
+    g.rivals.tick(0);
+    g.handleGameOver();
+  });
+  expect(
+    await page.evaluate(() =>
+      window.gravityShiftGame.scoreMgr.saveData.unlockedSkins.includes(
+        "phantom",
+      ),
+    ),
+  ).toBe(true);
+  expect(
+    await page.evaluate(
+      () => window.gravityShiftGame.scoreMgr.saveData.totalEnergy,
+    ),
+  ).toBe(energy);
+  await ready(page);
+  expect(
+    await page.evaluate(() =>
+      window.gravityShiftGame.scoreMgr.saveData.unlockedSkins.includes(
+        "phantom",
+      ),
+    ),
+  ).toBe(true);
+});

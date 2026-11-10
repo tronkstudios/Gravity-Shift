@@ -175,10 +175,18 @@ export class CapturedMotionController {
       1 - Math.exp(-dt * 22),
     );
     // Match the same gait clock as the player, including speed and paused transfers.
+    const gaitPhase = rig.boardActive ? 0.4 : phase;
     this.mixer.setTime(
-      idle ? 0.25 : (phase / (Math.PI * 2)) * this.run.getClip().duration,
+      idle ? 0.25 : (gaitPhase / (Math.PI * 2)) * this.run.getClip().duration,
     );
-    applySkeletalGait(rig, phase, this.airWeight, progress, this.landing, idle);
+    applySkeletalGait(
+      rig,
+      gaitPhase,
+      this.airWeight,
+      progress,
+      this.landing,
+      idle,
+    );
     this.phase = (((phase / (Math.PI * 2)) % 1) + 1) % 1;
   }
 }

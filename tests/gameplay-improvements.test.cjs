@@ -134,3 +134,40 @@ test("forks offer two signalled exits without placing an obstacle on either rout
     );
   }
 });
+
+test("capsule tolerance uses rounded corners rather than invisible square extensions", async () => {
+  const { segmentBox } = await import("../src/game/collision-shapes.js");
+  const box = { x: [0, 1], y: [0, 1] };
+  assert.equal(
+    segmentBox({ x: -0.15, y: -0.15 }, { x: -0.15, y: -0.15 }, box),
+    null,
+  );
+  assert.ok(segmentBox({ x: -0.1, y: -0.1 }, { x: -0.1, y: -0.1 }, box));
+});
+
+test("notification timers retain the global browser receiver", async () => {
+  const { NotificationQueue } =
+    await import("../src/services/notification-queue.js");
+  const schedule = globalThis.setTimeout,
+    cancel = globalThis.clearTimeout;
+  let scheduled = false,
+    cancelled = false;
+  try {
+    globalThis.setTimeout = function () {
+      assert.equal(this, globalThis);
+      scheduled = true;
+      return 17;
+    };
+    globalThis.clearTimeout = function () {
+      assert.equal(this, globalThis);
+      cancelled = true;
+    };
+    const q = new NotificationQueue(() => {});
+    q.push("message");
+    q.clear();
+    assert.ok(scheduled && cancelled);
+  } finally {
+    globalThis.setTimeout = schedule;
+    globalThis.clearTimeout = cancel;
+  }
+});
